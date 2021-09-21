@@ -1009,28 +1009,7 @@ enum struct eTankRankStruct
 	int g_tankRankNumKills;
 	char g_tankRankName[TANKRANK_NAME_MAXLEN];
 }
-eTankRankStruct g_tankRank[] = {
-	{50, "Unremarkable"},
-	{150, "Scarcely Lethal"},
-	{250, "Mildly Menacing"},
-	{400, "Somewhat Threatening"},
-	{600, "Uncharitable"},
-	{800, "Notably Dangerous"},
-	{1024, "Sufficiently Lethal"},
-	{1300, "Truly Feared"},
-	{1650, "Spectacularly Lethal"},
-	{2048, "Gore-Spattered"},
-	{3000, "Wicked Nasty"},
-	{4500, "Positively Inhumane"},
-	{5999, "Totally Ordinary"},
-	{6000, "Face-Melting"},
-	{8850, "Rage-Inducing"},
-	{15000, "Server-Clearing"},
-	{30000, "Epic"},
-	{40000, "Legendary"},
-	{45000, "Australian"},
-	{50000, "Hale's Own"}
-};
+eTankRankStruct g_tankRank[20];
 
 bool g_hasSteamTools = false;
 bool g_hasSendProxy = false;
@@ -1053,6 +1032,9 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	Tank_PrintLicense();
+
+	g_tankRank[0].g_tankRankNumKills = 50;
+	g_tankRank[0].g_tankRankName = "Unremarkable";
 
 	CreateConVar("tank_version", PLUGIN_VERSION, "Stop that Tank! Version", FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
 
@@ -9398,7 +9380,7 @@ public void OnEntityCreated(int iEntity, const char[] classname)
 
 	if(!g_bEnabled) return;
 
-	if(strcmp(classname, "item_currencypack_custom") == 0)
+	/*if(strcmp(classname, "item_currencypack_custom") == 0)
 	{
 		if(g_nGameMode == GameMode_Race)
 		{
@@ -9410,7 +9392,7 @@ public void OnEntityCreated(int iEntity, const char[] classname)
 			
 			SDKHook(iEntity, SDKHook_SpawnPost, CritCash_OnSpawnPost);
 		}
-	}else if(g_iCreatingCartDispenser > 0 && strcmp(classname, "dispenser_touch_trigger") == 0)
+	}else*/ if(g_iCreatingCartDispenser > 0 && strcmp(classname, "dispenser_touch_trigger") == 0)
 	{
 #if defined DEBUG
 		PrintToServer("(OnEntityCreated) %s (%d) (team %d) created by dispenser, saving reference!", classname, iEntity, g_iCreatingCartDispenser);
@@ -16193,3 +16175,1990 @@ public Action Tank_OnCalculateMaxSpeed(int client, float &speed)
 
 	return Plugin_Continue;
 }
+ient].g_settingsShowInfoPanel)
+	{
+		case ShowInfoPanel_PayloadOnly: return (g_nGameMode != GameMode_Race);
+		case ShowInfoPanel_PayloadRaceOnly: return (g_nGameMode == GameMode_Race);
+		case ShowInfoPanel_Never: return false;
+	}
+
+	return true; // Always show.
+}
+
+void Settings_Clear(int client)
+{
+	// Set the default value for each setting here..
+	g_settings[client].g_settingsShowInfoPanel = ShowInfoPanel_PayloadOnly;
+}
+
+public void Settings_ItemSelected(int client, CookieMenuAction action, any info, char[] buffer, int maxlen)
+{
+	if(action == CookieMenuAction_SelectOption)
+	{
+		Settings_MainMenu(client);
+	}
+}
+
+void Settings_MainMenu(int client)
+{
+	Handle menu = CreateMenu(MenuHandler_SettingsMain);
+
+	SetMenuTitle(menu, "%T", "Tank_Menu_Settings_Title", client);
+
+	char buffer[256];
+	char trans[64];
+	switch(g_settings[client].g_settingsShowInfoPanel)
+	{
+		case ShowInfoPanel_PayloadOnly: trans = "Tank_Menu_Settings_ShowGiantInfoPanel_State_PayloadOnly";
+		case ShowInfoPanel_PayloadRaceOnly: trans = "Tank_Menu_Settings_ShowGiantInfoPanel_State_PayloadRaceOnly";
+		case ShowInfoPanel_Never: trans = "Tank_Menu_Settings_ShowGiantInfoPanel_State_Never";
+		default: trans = "Tank_Menu_Settings_ShowGiantInfoPanel_State_AlwaysShow";
+	}
+
+	Format(buffer, sizeof(buffer), "%T", "Tank_Menu_Settings_ShowGiantInfoPanel", client, trans, client);
+	AddMenuItem(menu, "", buffer);
+
+	SetMenuExitBackButton(menu, true);
+	SetMenuExitButton(menu, true);
+
+	DisplayMenu(menu, client, MENU_TIME_FOREVER);
+}
+
+public int MenuHandler_SettingsMain(Menu menu, MenuAction action, int client, int menu_item)
+{
+	if(action == MenuAction_Select)
+	{
+		enum
+		{
+			MainMenu_InfoPanel=0
+		};
+
+		switch(menu_item)
+		{
+			case MainMenu_InfoPanel:
+			{
+				// Toggle the value of the info panel setting.
+				g_settings[client].g_settingsShowInfoPanel++;
+
+				if(g_settings[client].g_settingsShowInfoPanel < 0 || g_settings[client].g_settingsShowInfoPanel > MAX_SHOW_INFO_PANEL) g_settings[client].g_settingsShowInfoPanel = ShowInfoPanel_Always;
+				
+				char cookie[12];
+				IntToString(g_settings[client].g_settingsShowInfoPanel, cookie, sizeof(cookie));
+				SetClientCookie(client, g_cookieInfoPanel, cookie);
+			}
+		}
+
+		Settings_MainMenu(client);
+	}else if(action == MenuAction_Cancel)
+	{
+		if(menu_item == MenuCancel_ExitBack) ShowCookieMenu(client);
+	}else if(action == MenuAction_End)
+	{
+		delete menu;
+	}
+}
+
+public Action Listener_TeamName(int client, const char[] command, int argc)
+{
+	if(!g_bEnabled) return Plugin_Continue;
+
+	if(g_nGameMode != GameMode_Race) return Plugin_Continue; // Only allow name changing in tank race
+	if(client < 1 || client > MaxClients || !IsClientInGame(client)) return Plugin_Continue;
+
+	if(!GameRules_GetProp("m_bInWaitingForPlayers", 1))
+	{
+		// Only allow team name changes during the waiting for players state
+		return Plugin_Continue;
+	}
+
+	int team = GetClientTeam(client);
+	if(team != TFTeam_Red && team != TFTeam_Blue) return Plugin_Continue;
+
+	char defaultName[32];
+	if(g_nGameMode == GameMode_Race)
+	{
+		if(team == TFTeam_Red)
+		{
+			config.LookupString(g_hCvarTeamRedPlr, defaultName, sizeof(defaultName));
+		}else{
+			config.LookupString(g_hCvarTeamBluePlr, defaultName, sizeof(defaultName));
+		}
+	}else{
+		if(team == TFTeam_Red)
+		{
+			config.LookupString(g_hCvarTeamRed, defaultName, sizeof(defaultName));
+		}else{
+			config.LookupString(g_hCvarTeamBlue, defaultName, sizeof(defaultName));
+		}
+	}
+
+	char name[7]; // Tournament GUI only allows 5 characters, I will allow up to 6 for people smart enough to use the command.
+	GetCmdArgString(name, sizeof(name));
+
+	Handle cvarName = g_cvar_blueTeamName;
+	if(team == TFTeam_Red) cvarName = g_cvar_redTeamName;
+
+	char current[32];
+	config.LookupString(cvarName, current, sizeof(current));
+	// Block the change if that change is just going to be cutting off the default team name.
+	if(strcmp(defaultName, current) == 0)
+	{
+		if(strncmp(name, defaultName, 6, false) == 0)
+		{
+			return Plugin_Continue;
+		}
+	}
+
+	SetConVarString(cvarName, name, true, true);
+
+	return Plugin_Continue;
+}
+
+void Tournament_RestoreNames()
+{
+	char name[32];
+	if(g_nGameMode == GameMode_Race)
+	{
+		config.LookupString(g_hCvarTeamRedPlr, name, sizeof(name));
+		SetConVarString(FindConVar("mp_tournament_redteamname"), name);
+
+		config.LookupString(g_hCvarTeamBluePlr, name, sizeof(name));
+		SetConVarString(FindConVar("mp_tournament_blueteamname"), name);
+	}else{
+		config.LookupString(g_hCvarTeamRed, name, sizeof(name));
+		SetConVarString(FindConVar("mp_tournament_redteamname"), name);
+
+		config.LookupString(g_hCvarTeamBlue, name, sizeof(name));
+		SetConVarString(FindConVar("mp_tournament_blueteamname"), name);
+	}
+}
+
+void Tank_OnRankUp()
+{
+	EmitSoundToAll(SOUND_TANK_RANKUP);
+	Tank_FireworkEffects();
+
+	CreateTimer(1.0, Timer_TankRankEffects, 4, TIMER_FLAG_NO_MAPCHANGE);
+
+	// Put a disco ball above the tank
+	for(int team=2; team<=3; team++)
+	{
+		int train = EntRefToEntIndex(g_iRefTrackTrain[team]);
+		if(train > MaxClients)
+		{
+			int disco = CreateEntityByName("info_particle_system");
+			if(disco > MaxClients)
+			{
+				DispatchKeyValue(disco, "effect_name", "utaunt_disco_party");
+				SetEntPropEnt(disco, Prop_Send, "m_hOwnerEntity", train);
+
+				DispatchSpawn(disco);
+				ActivateEntity(disco);
+				AcceptEntityInput(disco, "Start");
+
+				float pos[3];
+				pos[2] = -10000.0;
+				TeleportEntity(disco, pos, NULL_VECTOR, NULL_VECTOR);
+
+				CreateTimer(1.0, Timer_DiscoFix, EntIndexToEntRef(disco), TIMER_FLAG_NO_MAPCHANGE);
+				CreateTimer(7.0, Timer_EntityCleanup, EntIndexToEntRef(disco));
+			}
+		}
+	}
+}
+
+public Action Timer_DiscoFix(Handle timer, int ref)
+{
+	// The particle doesn't show correctly until a few moments after it is activated.
+	int disco = EntRefToEntIndex(ref);
+	if(disco > MaxClients)
+	{
+		int train = GetEntPropEnt(disco, Prop_Send, "m_hOwnerEntity");
+		if(train > MaxClients)
+		{
+			float pos[3];
+			GetEntPropVector(train, Prop_Send, "m_vecOrigin", pos);
+			pos[2] += 100.0;
+			TeleportEntity(disco, pos, NULL_VECTOR, NULL_VECTOR);
+
+			SetVariantString("!activator");
+			AcceptEntityInput(disco, "SetParent", train);
+		}
+	}
+
+	return Plugin_Handled;
+}
+
+public Action Timer_TankRankEffects(Handle timer, int numTimes)
+{
+	Tank_FireworkEffects();
+
+	if(--numTimes > 0)
+	{
+		CreateTimer(GetRandomFloat(0.8, 1.5), Timer_TankRankEffects, numTimes, TIMER_FLAG_NO_MAPCHANGE);
+	}
+
+	return Plugin_Handled;
+}
+
+void Tank_FireworkEffects()
+{
+	if(g_iParticleFireworks[TFTeam_Red] == -1 || g_iParticleFireworks[TFTeam_Blue] == -1) return;
+
+	EmitGameSoundToAll("Summer.Fireworks");
+
+	// Spawns fireworks near all the trains
+	for(int team=2; team<=3; team++)
+	{
+		int train = EntRefToEntIndex(g_iRefTrackTrain[team]);
+		if(train > MaxClients)
+		{
+			float pos[3];
+			GetEntPropVector(train, Prop_Send, "m_vecOrigin", pos);
+			pos[2] += 100.0;
+			float ang[3];
+			GetEntPropVector(train, Prop_Send, "m_angRotation", ang);
+
+			float posFireworks[3];
+			GetPositionForward(pos, ang, posFireworks, GetRandomFloat(-70.0, 90.0));
+
+			int index = g_iParticleFireworks[TFTeam_Red];
+			if(team == TFTeam_Blue) index = g_iParticleFireworks[TFTeam_Blue];
+
+			TE_Particle(index, posFireworks);
+			TE_SendToAll();
+
+			pos[0] += GetRandomFloat(-150.0, 150.0);
+			pos[1] += GetRandomFloat(-150.0, 150.0);
+			TE_Particle(g_iParticleFetti, pos);
+			TE_SendToAll();
+		}
+	}
+}
+
+void ShowGameMessage(const char[] message, const char[] icon="hud_taunt_hint", float time=5.0, int displayToTeam=0, int teamColor=0)
+{
+	int msg = CreateEntityByName("game_text_tf");
+	if(msg > MaxClients)
+	{
+		DispatchKeyValue(msg, "message", message);
+		switch(displayToTeam)
+		{
+			case 2: DispatchKeyValue(msg, "display_to_team", "2");
+			case 3: DispatchKeyValue(msg, "display_to_team", "3");
+			default: DispatchKeyValue(msg, "display_to_team", "0");
+		}
+		switch(teamColor)
+		{
+			case 2: DispatchKeyValue(msg, "background", "2");
+			case 3: DispatchKeyValue(msg, "background", "3");
+			default: DispatchKeyValue(msg, "background", "0");
+		}
+		DispatchKeyValue(msg, "icon", icon);
+		DispatchSpawn(msg);
+
+		AcceptEntityInput(msg, "Display");
+
+		SetEntPropFloat(msg, Prop_Data, "m_flAnimTime", GetEngineTime()+time);
+
+		CreateTimer(0.5, Timer_ShowGameMessage, EntIndexToEntRef(msg), TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
+	}
+}
+
+public Action Timer_ShowGameMessage(Handle timer, int ref)
+{
+	int msg = EntRefToEntIndex(ref);
+	if(msg > MaxClients)
+	{
+		if(GetEngineTime() > GetEntPropFloat(msg, Prop_Data, "m_flAnimTime"))
+		{
+			AcceptEntityInput(msg, "Kill");
+			return Plugin_Stop;
+		}
+
+		AcceptEntityInput(msg, "Display");
+		return Plugin_Continue;
+	}
+
+	return Plugin_Stop;
+}
+
+void Hell_KillGateTimer()
+{
+	if(g_hellGateTimer != INVALID_HANDLE)
+	{
+		KillTimer(g_hellGateTimer);
+		g_hellGateTimer = INVALID_HANDLE;
+	}
+}
+
+public Action Timer_GatesOfHell(Handle timer, any unused)
+{
+	// Since we are spawning an extra giant in hell, extend the period of time before the gates open to give players more time to battle.
+	int relay = Entity_FindEntityByName(HELL_GATES_TARGETNAME, "logic_relay");
+	if(relay != -1)
+	{
+		AcceptEntityInput(relay, "Enable");
+		AcceptEntityInput(relay, "Trigger");
+#if defined DEBUG
+		PrintToServer("(Timer_GatesOfHell) Opened the gates of hell: %d", relay);
+#endif
+	}
+
+	// Show a helpful annotation of what to do in hell.
+	Handle event = CreateEvent("show_annotation");
+	if(event != INVALID_HANDLE)
+	{
+		float pos[3] = {-201.50, 489.36, -8329.50};
+
+		SetEventInt(event, "id", Annotation_HellHint);
+		SetEventFloat(event, "worldPosX", pos[0]);
+		SetEventFloat(event, "worldPosY", pos[1]);
+		SetEventFloat(event, "worldPosZ", pos[2]);
+		
+		SetEventInt(event, "visibilityBitfield", 0); // Show to everyone.
+
+		char text[256];		
+		Format(text, sizeof(text), "%T", "Tank_Annotation_HellHint", LANG_SERVER);
+		SetEventString(event, "text", text);
+
+		SetEventFloat(event, "lifetime", 7.0);
+		SetEventString(event, "play_sound", "misc/null.wav");
+		
+		FireEvent(event); // Frees the handle.
+	}
+
+	g_hellGateTimer = INVALID_HANDLE;
+	return Plugin_Stop;
+}
+
+public void Event_ObjectDestroyed(Handle event, const char[] eventName, bool dontBroadcast)
+{
+	if(!g_bEnabled) return;
+
+	int attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
+	if(attacker >= 1 && attacker <= MaxClients && IsClientInGame(attacker))
+	{
+		TFObjectType type = view_as<TFObjectType>(GetEventInt(event, "objecttype"));
+		if(type != TFObject_Sapper)
+		{
+			RageMeter_OnDamageDealt(attacker);
+		}
+	}
+}
+
+void Parent_Think(int tank, int team, float distanceToGoal, float distanceParent, float totalProgress)
+{
+	for(int i=g_parentList.Length-1; i>=0; i--)
+	{
+		int array[ARRAY_PARENT_SIZE];
+		g_parentList.GetArray(i, array, ARRAY_PARENT_SIZE);
+		if(array[ParentArray_Team] == 0 || array[ParentArray_Team] == team)
+		{
+			float location = view_as<float>(array[ParentArray_Location]);
+			if(totalProgress >= location)
+			{
+#if defined DEBUG
+				PrintToServer("(Parent_Think) Hit parent config at %f - type %d", location, array[ParentArray_Type]);
+#endif
+				g_parentList.Erase(i);
+
+				if(g_bRaceParentedForHill[team]) continue; // The parenting is already being controlled for uphill paths. Give it precedence over user config.
+				if(distanceToGoal < distanceParent) continue; // The tank is near enough to the goal that it will be parented anyway.
+
+				if(array[ParentArray_Type] == ParentType_Start)
+				{
+					// The tank needs to be parented.
+					if(GetEntPropEnt(tank, Prop_Send, "moveparent") == -1) // Check to make sure we aren't already parented.
+					{
+						Tank_Parent(team);
+					}
+				}else{
+					// The tank needs to be un-parented.
+					if(GetEntPropEnt(tank, Prop_Send, "moveparent") > MaxClients) // Check to make sure we aren't already parented.
+					{
+						Tank_UnParent(team);
+					}
+				}
+			}
+		}
+	}
+}
+
+bool Float_AlmostEqual(float one, float two)
+{
+	// FloatCompare returns -1 if the first argument is smaller than the second argument.
+	return (FloatCompare(FloatAbs(one - two), EPSILON) == -1);
+}
+
+void Timer_KillFailsafe()
+{
+	if(g_timerFailsafe != INVALID_HANDLE)
+	{
+		KillTimer(g_timerFailsafe);
+		g_timerFailsafe = INVALID_HANDLE;
+	}
+}
+
+void Timer_KillCountdown()
+{
+	if(g_timerCountdown != INVALID_HANDLE)
+	{
+		KillTimer(g_timerCountdown);
+		g_timerCountdown = INVALID_HANDLE;
+	}	
+}
+
+void Timer_KillAnnounce()
+{
+	if(g_timerAnnounce != INVALID_HANDLE)
+	{
+		KillTimer(g_timerAnnounce);
+		g_timerAnnounce = INVALID_HANDLE;
+	}	
+}
+
+void Timers_KillAll()
+{
+	Timer_KillFailsafe();
+	Timer_KillCountdown();
+	Timer_KillStart();
+	Timer_KillAnnounce();
+
+	Hell_KillGateTimer();
+}
+
+public Action Timer_Failsafe(Handle timer, any unused)
+{
+#if defined DEBUG
+	PrintToServer("(Timer_Failsafe)");
+#endif
+	// We've waited for a second after the tank is destroyed, now resume round logic.
+
+	// There's a rare bug that the tank can stick around even after the OnKilled output is called.
+	// This will just make sure the tank is removed. Therefore, the Tank_Think logic won't run and the cart won't move.
+	int tank = EntRefToEntIndex(g_iRefTank[TFTeam_Blue]);
+	if(tank > MaxClients)
+	{
+		SetVariantInt(MAX_TANK_HEALTH);
+		AcceptEntityInput(tank, "RemoveHealth");
+		AcceptEntityInput(tank, "Kill");
+
+		LogMessage("Wow, you hit a rare bug where the tank stuck around after the OnKilled output. Congrats!");
+	}
+
+	// Check to see if the cart exists. If the cart does not exist, the round is buggered and we should declare a winner.
+	int cart = EntRefToEntIndex(g_iRefTrackTrain[TFTeam_Blue]);
+	if(cart <= MaxClients)
+	{
+		PrintToChatAll("%t", "Tank_Chat_RareBug_Badwater", 0x01, g_strTeamColors[TFTeam_Blue], 0x01, g_strRankColors[Rank_Unique], 0x01);
+		LogMessage("Wow, you hit the rare pl_badwater bug where the tank was killed at the end. Congrats!");
+
+		// Assume the cart was killed too close to the end and declare BLU as the winner.
+		if(g_bIsFinale)
+		{
+			// Loop through all the control points and set them to BLU.
+			Game_CaptureControlPoints(TFTeam_Blue, TFTeam_Blue);
+		}else{
+			// We are in the middle of a multi-stage map, setting the winner to BLU will break map logic so set it to RED in this very rare case.
+			Game_SetWinner(TFTeam_Red);
+		}
+	}else{
+		// Cart is fine - continue as normal.
+		GameLogic_DoNext();
+	}
+
+	g_timerFailsafe = INVALID_HANDLE;
+	return Plugin_Stop;
+}
+
+public Action Timer_FailsafeBombDeploy(Handle timer, any unused)
+{
+#if defined DEBUG
+	PrintToServer("(Timer_FailsafeBombDeploy)");
+#endif	
+	PrintToChatAll("%t", "Tank_Chat_FailSafe_BombDeploy", 0x01, g_strRankColors[Rank_Unique], 0x01);
+
+	// The round should have ended by now.
+	// Declare a winner to keep the round from lasting forever.
+	if(g_bIsFinale)
+	{
+		// Loop through all the control points and set them to BLU.
+		Game_CaptureControlPoints(TFTeam_Blue, TFTeam_Blue);
+	}else{
+		// We are in the middle of a multi-stage map, setting the winner to BLU will break map logic so set it to RED in this very rare case.
+		Game_SetWinner(TFTeam_Red);
+	}
+
+	g_timerFailsafe = INVALID_HANDLE;
+	return Plugin_Stop;
+}
+
+void Game_CaptureControlPoints(int team, int ownerTeam)
+{
+	for(int i=0; i<MAX_LINKS; i++)
+	{
+		int controlPoint = EntRefToEntIndex(g_iRefLinkedCPs[team][i]);
+		if(controlPoint > MaxClients)
+		{
+#if defined DEBUG
+			PrintToServer("(Game_CaptureControlPoints) SetOwner(team %d) on #%d %d..", ownerTeam, i, controlPoint);
+#endif
+			SetVariantInt(ownerTeam);
+			AcceptEntityInput(controlPoint, "SetOwner", -1, controlPoint);
+		}
+	}
+}
+
+public Action Tank_OnWeaponPickup(int client, int droppedWeapon, bool &result)
+{
+	if(!g_bEnabled) return Plugin_Continue;
+
+	// The player is attempting to pick up a dropped weapon.
+	if(IsClientInGame(client) && GetEntProp(client, Prop_Send, "m_bIsMiniBoss"))
+	{
+#if defined DEBUG
+		PrintToServer("(Tank_OnWeaponPickup) Blocked %N from picking up %d!", client, droppedWeapon);
+#endif
+		result = false;
+		return Plugin_Handled;
+	}
+
+	return Plugin_Continue;
+}
+
+public Action Tank_OnWeaponDropped(int itemDefinitionIndex, int accountId, int itemIdHigh, int itemIdLow, Address item)
+{
+	// CTFPlayer::m_AttributeManager + 104 seems to be the player's account id. Using this number you could possibly find the original owner of the weapon.
+	// Alternative way: Grab the account id from the player's AuthId_Steam3 auth string.
+	if(!g_bEnabled) return Plugin_Continue;
+	// At this time, a weapon is dropped for 3 reasons: 1) Spy feign 2) Player death 3) Weapon regeneration.
+
+	// The player is about to drop a weapon. Check if we have flagged this weapon as not dropable.
+	if(IsValidAddress(item))
+	{
+		Address addr = item + view_as<Address>(OFFSET_DONT_DROP);
+		if(LoadFromAddress(addr, NumberType_Int32) == FLAG_DONT_DROP_WEAPON)
+		{
+#if defined DEBUG
+			PrintToServer("(Tank_OnWeaponDropped) Blocked weapon drop: itemdef = %d, account id = %d, itemidlow = %d, itemidhigh = %d!", itemDefinitionIndex, accountId, itemIdHigh, itemIdLow);
+#endif
+			// Block this weapon from being dropped.
+			return Plugin_Handled;
+		}
+	}
+
+	return Plugin_Continue;
+}
+
+void Player_RemoveBuildings(int client)
+{
+	Player_RemoveBuilding(client, "obj_sentrygun");
+	Player_RemoveBuilding(client, "obj_dispenser");
+	Player_RemoveBuilding(client, "obj_teleporter");
+}
+
+void Player_RemoveBuilding(int client, const char[] className)
+{
+	int building = MaxClients+1;
+	while((building = FindEntityByClassname(building, className)) > MaxClients)
+	{
+		if(GetEntPropEnt(building, Prop_Send, "m_hBuilder") == client)
+		{
+			AcceptEntityInput(building, "Kill");
+		}
+	}
+}
+
+// https://github.com/ValveSoftware/source-sdk-2013/blob/master/mp/src/game/server/util.cpp#L838
+//-----------------------------------------------------------------------------
+// Purpose: Shake the screen of all clients within radius.
+//			radius == 0, shake all clients
+// UNDONE: Fix falloff model (disabled)?
+// UNDONE: Affect user controls?
+// Input  : center - Center of screen shake, radius is measured from here.
+//			amplitude - Amplitude of shake
+//			frequency - 
+//			duration - duration of shake in seconds.
+//			radius - Radius of effect, 0 shakes all clients.
+//			command - One of the following values:
+//				SHAKE_START - starts the screen shake for all players within the radius
+//				SHAKE_STOP - stops the screen shake for all players within the radius
+//				SHAKE_AMPLITUDE - modifies the amplitude of the screen shake
+//									for all players within the radius
+//				SHAKE_FREQUENCY - modifies the frequency of the screen shake
+//									for all players within the radius
+//			bAirShake - if this is false, then it will only shake players standing on the ground.
+//-----------------------------------------------------------------------------
+void UTIL_ScreenShake(float center[3], float amplitude, float frequency, float duration, float radius, int command, bool airShake)
+{
+	for(int i=1; i<=MaxClients; i++)
+	{
+		if(IsClientInGame(i) && !IsFakeClient(i))
+		{
+			if(!airShake && command == Shake_Start && !(GetEntityFlags(i) && FL_ONGROUND)) continue;
+
+			float playerPos[3];
+			GetClientAbsOrigin(i, playerPos);
+
+			float localAmplitude = ComputeShakeAmplitude(center, playerPos, amplitude, radius);
+
+			if(localAmplitude < 0.0) continue;
+
+			if(localAmplitude > 0 || command == Shake_Stop)
+			{
+				Handle msg = StartMessageOne("Shake", i, USERMSG_RELIABLE);
+				if(msg != null)
+				{
+					BfWriteByte(msg, command);
+					BfWriteFloat(msg, localAmplitude);
+					BfWriteFloat(msg, frequency);
+					BfWriteFloat(msg, duration);
+
+					EndMessage();
+				}
+			}
+		}
+	}
+}
+
+float ComputeShakeAmplitude(float center[3], float playerPos[3], float amplitude, float radius)
+{
+	if(radius <= 0.0) return amplitude;
+
+	float localAmplitude = -1.0;
+	float delta[3];
+	SubtractVectors(center, playerPos, delta);
+	float distance = GetVectorLength(delta);
+
+	if(distance <= radius)
+	{
+		float perc = 1.0 - (distance / radius);
+		localAmplitude = amplitude * perc;
+	}
+
+	return localAmplitude;
+}
+
+public Action Tank_PassFilter(int ent1, int ent2, bool &result)
+{
+	if(!g_bEnabled) return Plugin_Continue;
+	
+	switch(g_entitiesOfInterest[ent1])
+	{
+		// Keep dispensers non-solid to enemy sentry busters.
+		case Interest_Dispenser:
+		{
+			if(ent1 > MaxClients && ent2 >= 1 && ent2 <= MaxClients && Spawner_HasGiantTag(ent2, GIANTTAG_SENTRYBUSTER) && GetEntProp(ent2, Prop_Send, "m_bIsMiniBoss"))
+			{
+				result = false;
+				return Plugin_Handled;
+			}
+		}
+	}
+
+	return Plugin_Continue;
+}
+
+void OvertimeTimer_Create()
+{
+	// Create a HUD timer that will countdown the time until overtime starts, at which time the carts can no longer move backwards.
+	Bomb_KillTimer();
+
+	int timerDuration = RoundToNearest(config.LookupFloat(g_hCvarRaceTimeOvertime) * 60.0);
+	if(timerDuration > 0)
+	{
+		int timer = CreateEntityByName("team_round_timer");
+		if(timer > MaxClients)
+		{
+			DispatchKeyValue(timer, "targetname", TARGETNAME_OVERTIME_TIMER);
+
+			DispatchSpawn(timer);
+			
+			if(timerDuration < 10) timerDuration = 10; // ???
+			SetVariantInt(timerDuration);
+			AcceptEntityInput(timer, "SetTime");
+			
+			SetVariantInt(1);
+			AcceptEntityInput(timer, "ShowInHUD");
+
+			SetVariantInt(1);
+			AcceptEntityInput(timer, "AutoCountdown", timer);
+
+			AcceptEntityInput(timer, "Enable");
+			
+			HookSingleEntityOutput(timer, "On1SecRemain", OvertimeTimer_On1SecRemain, true);
+			//HookSingleEntityOutput(timer, "On30SecRemain", OvertimeTimer_On30SecRemain, true);
+
+#if defined DEBUG
+			PrintToServer("(OvertimeTimer_Create) Created \"team_round_timer\" to countdown overtime: %d!", timer);
+#endif
+			g_iRefBombTimer = EntIndexToEntRef(timer);
+
+			// For some reason, nightfall stage 3 disables the timer after I create it
+			RequestFrame(NextFrame_EnableTimer, g_iRefBombTimer);
+
+			TrainWatcher_SetCapBlocked(true); // Allows the round to enter overtime. However, the OnFinished output will no longer fire when the countdown reaches 0.
+		}else{
+			LogMessage("Failed to create \"team_round_timer\" to countdown giant robot spawn.");
+		}
+	}	
+}
+
+public void OvertimeTimer_On1SecRemain(char[] output, int caller, int activator, float delay)
+{
+#if defined DEBUG
+	PrintToServer("(OvertimeTimer_On1SecRemain) caller %d activator: %d!", caller, activator);
+#endif
+
+	Timer_KillFailsafe();
+	g_timerFailsafe = CreateTimer(1.0, Timer_OvertimeStarted, _, TIMER_REPEAT);
+}
+
+public Action Timer_OvertimeStarted(Handle hTimer)
+{
+#if defined DEBUG
+	PrintToServer("(Timer_OvertimeStarted) Overtime has begun!");
+#endif
+
+	// Leave the timer up to enforce that it is overtime.
+	g_isRaceInOvertime = true;
+
+	char message[256];
+	Format(message, sizeof(message), "%T", "Tank_GameText_Overtime", LANG_SERVER);
+	ShowGameMessage(message, "ico_notify_ten_seconds", 5.0);
+
+	g_timerFailsafe = INVALID_HANDLE;
+	return Plugin_Stop;
+}
+
+void TrainWatcher_SetCapBlocked(bool capBlocked)
+{
+	if(g_iOffset_m_bCapBlocked <= 0) return;
+
+	int watcher = MaxClients+1;
+	while((watcher = FindEntityByClassname(watcher, "team_train_watcher")) > MaxClients)
+	{
+		// Causes CTeamTrainWatcher::TimerMayExpire to return false, thereby allowing the round to go into overtime in plr.
+		// Setting this netprop doesn't appear to cause any problems.
+		// Alternatives include CTFGameRules + 1788 but it is easier to get at the train watcher.
+		SetEntData(watcher, g_iOffset_m_bCapBlocked, capBlocked, 1, false);
+	}
+}
+
+int ControlPoint_GetTeam(int controlPoint)
+{
+	if(controlPoint > MaxClients)
+	{
+		int ref = EntIndexToEntRef(controlPoint);
+
+		for(int team=2; team<=3; team++)
+		{
+			for(int i=0; i<MAX_LINKS; i++)
+			{
+				if(g_iRefLinkedCPs[team][i] != 0 && g_iRefLinkedCPs[team][i] == ref)
+				{
+					return team;
+				}
+			}
+		}
+	}
+
+	return -1;
+}
+
+void Announcer_SetEnabled(bool enabled)
+{
+	g_announcer.g_announcerActive = enabled;
+}
+
+void Announcer_Reset()
+{
+	g_announcer.g_announcerActive = false;
+
+	g_announcer.g_announcerCatchingUp = false;
+	g_announcer.g_announcerCloseGame = false;
+	g_announcer.g_announcerLargeDifference = false;
+	for(int i=0; i<ANNOUNCER_MAX_MESSAGES; i++) g_announcer.g_announcerLastMessage[i] = 0.0;
+}
+
+void Announcer_Think()
+{
+	if(!g_announcer.g_announcerActive) return;
+	if(g_bRaceIntermission) return;
+
+	// Both Tanks are very close to the end. "it's neck and neck" or "this is going to be close"
+	if(!g_announcer.g_announcerCloseGame)
+	{
+		bool noProblem = true;
+		bool closeToEnd = false;
+
+		float diff = 0.0;
+		for(int team=2; team<=3; team++)
+		{
+			int watcher = EntRefToEntIndex(g_iRefTrainWatcher[team]);
+			if(watcher > MaxClients)
+			{
+				float totalProgress = GetEntPropFloat(watcher, Prop_Send, "m_flTotalProgress");
+				if(totalProgress >= 0.98) closeToEnd = true;
+
+				diff = totalProgress - diff;
+			}else{
+				noProblem = false;
+				break;
+			}
+		}
+
+		if(noProblem && closeToEnd && FloatAbs(diff) < 0.011) // 0.010590
+		{
+#if defined DEBUG
+			PrintToServer("(Announcer_Think) Triggered CloseGame with diff: %f!", FloatAbs(diff));
+#endif
+			g_announcer.g_announcerCloseGame = true;
+			g_announcer.g_announcerLastMessage[AnnouncerMessage_CloseGame] = GetEngineTime();
+
+			switch(GetRandomInt(0,1))
+			{
+				case 1: BroadcastSoundToTeam(TFTeam_Spectator, "vo/announcer_plr_racegeneral05.mp3");
+				default: BroadcastSoundToTeam(TFTeam_Spectator, "vo/announcer_plr_racegeneral06.mp3");
+			}
+		}
+	}
+
+	// The Tanks are very far apart from each other in terms of progress.
+	if(!g_announcer.g_announcerLargeDifference)
+	{
+		bool noProblem = true;
+		int aheadTeam = -1;
+		float aheadAmount = -1.0;
+
+		float diff = 0.0;
+		for(int team=2; team<=3; team++)
+		{
+			int watcher = EntRefToEntIndex(g_iRefTrainWatcher[team]);
+			if(watcher > MaxClients)
+			{
+				float totalProgress = GetEntPropFloat(watcher, Prop_Send, "m_flTotalProgress");
+
+				if(aheadTeam == -1 || totalProgress > aheadAmount)
+				{
+					aheadTeam = team;
+					aheadAmount = totalProgress;
+				}
+				diff = totalProgress - diff;
+			}else{
+				noProblem = false;
+				break;
+			}
+		}
+
+		if(noProblem && aheadTeam != -1 && FloatAbs(diff) > 0.25)
+		{
+#if defined DEBUG
+			PrintToServer("(Announcer_Think) Triggered LargeDifference with diff: %f!", FloatAbs(diff));
+#endif
+			g_announcer.g_announcerLargeDifference = true;
+			g_announcer.g_announcerLastMessage[AnnouncerMessage_LargeDifference] = GetEngineTime();
+
+			BroadcastSoundToTeam(aheadTeam, "vo/announcer_plr_racegeneral14.mp3");
+			BroadcastSoundToEnemy(aheadTeam, "vo/announcer_plr_racegeneral13.mp3");
+		}
+	}
+
+	// TODO: Catch when one team tank's is gaining on the enemy's tank. Might get too spammy.
+}
+
+void Borneo_ShowAlternativeRoute(int client)
+{
+	if(IsFakeClient(client)) return;
+
+	// It is not obvious that the giant can fit through the doorway on the penultimate control point.
+	// This shows any giant/buster the alternative route.
+	Handle hEvent = CreateEvent("show_annotation");
+	if(hEvent != INVALID_HANDLE)
+	{
+		float flPos[3] = {-498.18, 4.53, 132.03};
+
+		SetEventInt(hEvent, "id", Annotation_BorneoDetour+client-1);
+		SetEventFloat(hEvent, "worldPosX", flPos[0]);
+		SetEventFloat(hEvent, "worldPosY", flPos[1]);
+		SetEventFloat(hEvent, "worldPosZ", flPos[2]);
+		
+		SetEventInt(hEvent, "visibilityBitfield", (1 << client)); // Only show to player carrying the bomb
+
+		char text[256];
+		Format(text, sizeof(text), "%T", "Tank_Annotation_Borneo_Detour", client);
+		SetEventString(hEvent, "text", text);
+
+		SetEventFloat(hEvent, "lifetime", 13.0);
+		SetEventString(hEvent, "play_sound", "coach/coach_attack_here.wav");
+		
+		FireEvent(hEvent); // Frees the handle
+	}
+
+	// If the player is currently carrying the bomb, postpone the next guiding annotation.
+	if(g_nGameMode == GameMode_BombDeploy)
+	{
+		int bomb = EntRefToEntIndex(g_iRefBombFlag);
+		if(bomb > MaxClients && client == GetEntPropEnt(bomb, Prop_Send, "moveparent"))
+		{
+			g_flBombLastMessage = GetEngineTime();
+
+			Handle event = CreateEvent("hide_annotation");
+			if(event != null)
+			{
+				SetEventInt(event, "id", Annotation_GuidingHint);
+
+				FireEvent(event); // Frees the handle.
+			}
+		}
+	}
+}
+
+void Player_RemoveUberChargeBonus()
+{
+	for(int client=1; client<=MaxClients; client++)
+	{
+		if(IsClientInGame(client))
+		{
+			Tank_RemoveAttribute(client, ATTRIB_UBERCHARGE_RATE_BONUS);
+		}
+	}
+}
+
+void Tank_CheckForSeparation(int team, int tank, int cart)
+{
+	if(GetEntPropEnt(tank, Prop_Send, "moveparent") > MaxClients || g_bRaceIntermission)
+	{
+		// Tank is parented so it shouldn't separate from the cart.
+		g_timeTankSeparation[team] = 0.0;
+		return;
+	}
+
+	float tankPos[3];
+	float cartPos[3];
+	GetEntPropVector(tank, Prop_Send, "m_vecOrigin", tankPos);
+	GetEntPropVector(cart, Prop_Send, "m_vecOrigin", cartPos);
+
+	if(GetVectorDistance(tankPos, cartPos) > config.LookupFloat(g_hCvarDistanceSeparation))
+	{
+		// Tank is too far from the cart.
+		if(g_timeTankSeparation[team] == 0.0)
+		{
+			g_timeTankSeparation[team] = GetEngineTime() + 10.0;
+		}else if(GetEngineTime() > g_timeTankSeparation[team])
+		{
+			// Enough time has passed. Move the tank back to the cart.
+
+			Tank_RestorePath(tank);
+
+			// Try teleporting the tank back to the cart even though most likely it won't work.
+			cartPos[2] -= 50.0;
+			float cartAngles[3];
+			GetEntPropVector(cart, Prop_Send, "m_angRotation", cartAngles);
+
+			TeleportEntity(tank, cartPos, cartAngles, NULL_VECTOR);
+
+			g_timeTankSeparation[team] = 0.0;
+#if defined DEBUG
+			PrintToServer("(Tank_CheckForSeparation) Detected separation team %d, teleporting the tank back to the cart..", team);
+#endif
+		}
+	}else{
+		// All is well.
+		g_timeTankSeparation[team] = 0.0;
+	}
+}
+
+public Action Command_Config(int client, int args)
+{
+	if(!g_bEnabled) return Plugin_Continue;
+
+	if(args != 1 && args != 2)
+	{
+		ReplyToCommand(client, "Usage: tank_config <config name> [value]");
+		return Plugin_Handled;
+	}
+
+	char configName[64];
+	GetCmdArg(1, configName, sizeof(configName));
+	char configValue[MAXLEN_CONFIG_VALUE];
+
+	if(args == 1)
+	{
+		if(config.GetString(configName, configValue, sizeof(configValue)))
+		{
+			ReplyToCommand(client, "Value from config file \"%s\": \"%s\".", configName, configValue);
+			return Plugin_Handled;
+		}
+
+		ConVar cvar = FindConVar(configName);
+		if(cvar != null)
+		{
+			cvar.GetString(configValue, sizeof(configValue));
+			ReplyToCommand(client, "Value from convar \"%s\": \"%s\".", configName, configValue);
+			return Plugin_Handled;
+		}
+
+		ReplyToCommand(client, "Config name does not exist!");
+		return Plugin_Handled;
+	}
+
+	GetCmdArg(2, configValue, sizeof(configValue));
+	if(config.SetString(configName, configValue, true))
+	{
+		ReplyToCommand(client, "Changed config name \"%s\" to \"%s\".", configName, configValue);
+	}else{
+		ReplyToCommand(client, "Failed to change config name \"%s\".", configName);
+	}
+
+	return Plugin_Handled;
+}
+
+void Mod_Toggle(bool enable)
+{
+	if(enable)
+	{
+		// Enable the mod.
+
+		// Change the game description.
+		if(g_hasSteamTools && GetConVarBool(g_hCvarGameDesc))
+		{
+#if defined _steamtools_included
+			char desc[32];
+			Format(desc, sizeof(desc), "Stop that Tank! v%s", PLUGIN_VERSION);
+			Steam_SetGameDescription(desc);
+#endif
+		}
+
+		// Add stt tag to sv_tags.
+		Mod_ToggleTags(true);
+
+		// Set some cvars.
+		// Fixes sentry guns not targeting the tank on stage 2 maps
+		// See: https://github.com/ValveSoftware/source-sdk-2013/blob/master/sp/src/game/server/baseentity.cpp#L2858
+		SetConVarInt(g_hCvarLOSMode, 1);
+		SetConVarInt(g_cvar_mp_bonusroundtime, 15); // Map logic on pl_goldrush & pl_hoodoo_final rely on the default bonus round time.
+		ServerCommand("exec stt_cvars.cfg");
+		Tournament_RestoreNames();
+
+		// Enable memory patches.
+		if(g_patchPhysics != null && !g_patchPhysics.isEnabled())
+		{
+			LogMessage("Patching PhysicsSimulate at 0x%X..", g_patchPhysics.Get(MemoryIndex_Address));
+			g_patchPhysics.enable();
+		}
+		if(g_patchUpgrade != null && !g_patchUpgrade.isEnabled())
+		{
+			LogMessage("Patching UpgradeHistory at 0x%X..", g_patchUpgrade.Get(MemoryIndex_Address));
+			g_patchUpgrade.enable();
+
+			g_bEnableGameModeHook = true;
+		}
+		if(g_patchKnockback != null && !g_patchKnockback.isEnabled())
+		{
+			LogMessage("Patching Knockback at 0x%X..", g_patchKnockback.Get(MemoryIndex_Address));
+			g_patchKnockback.enable();
+		}
+		if(g_patchTouchBonk != null && !g_patchTouchBonk.isEnabled())
+		{
+			LogMessage("Patching FlagTouchBonk at 0x%X..", g_patchTouchBonk.Get(MemoryIndex_Address));
+			g_patchTouchBonk.enable();
+		}
+		if(g_patchTouchUber != null && !g_patchTouchUber.isEnabled())
+		{
+			LogMessage("Patching FlagTouchUber at 0x%X..", g_patchTouchUber.Get(MemoryIndex_Address));
+			g_patchTouchUber.enable();
+		}
+		if(g_patchTauntBonk != null && !g_patchTauntBonk.isEnabled())
+		{
+			LogMessage("Patching FlagTauntBonk at 0x%X..", g_patchTauntBonk.Get(MemoryIndex_Address));
+			g_patchTauntBonk.enable();
+		}
+		if(g_patchDropBonk != null && !g_patchDropBonk.isEnabled())
+		{
+			LogMessage("Patching FlagDropBonk at 0x%X..", g_patchDropBonk.Get(MemoryIndex_Address));
+			g_patchDropBonk.enable();
+		}
+
+		LogMessage("Stop that Tank!: Ready");
+	}else{
+		// Disable the mod.
+
+		// Remove stt tag from sv_tags.
+		Mod_ToggleTags(false);
+
+		// Disable memory patches.
+		if(g_patchPhysics != null && g_patchPhysics.isEnabled())
+		{
+			LogMessage("Un-patching PhysicsSimulate at 0x%X..", g_patchPhysics.Get(MemoryIndex_Address));
+			g_patchPhysics.disable();
+		}
+		if(g_patchUpgrade != null && g_patchUpgrade.isEnabled())
+		{
+			LogMessage("Un-patching UpgradeHistory at 0x%X..", g_patchUpgrade.Get(MemoryIndex_Address));
+			g_patchUpgrade.disable();
+
+			g_bEnableGameModeHook = false;
+		}
+		if(g_patchKnockback != null && g_patchKnockback.isEnabled())
+		{
+			LogMessage("Un-patching Knockback at 0x%X..", g_patchKnockback.Get(MemoryIndex_Address));
+			g_patchKnockback.disable();
+		}
+		if(g_patchTouchBonk != null && g_patchTouchBonk.isEnabled())
+		{
+			LogMessage("Un-patching FlagTouchBonk at 0x%X..", g_patchTouchBonk.Get(MemoryIndex_Address));
+			g_patchTouchBonk.disable();
+		}
+		if(g_patchTouchUber != null && g_patchTouchUber.isEnabled())
+		{
+			LogMessage("Un-patching FlagTouchUber at 0x%X..", g_patchTouchUber.Get(MemoryIndex_Address));
+			g_patchTouchUber.disable();
+		}
+		if(g_patchTauntBonk != null && g_patchTauntBonk.isEnabled())
+		{
+			LogMessage("Un-patching FlagTauntBonk at 0x%X..", g_patchTauntBonk.Get(MemoryIndex_Address));
+			g_patchTauntBonk.disable();
+		}
+		if(g_patchDropBonk != null && g_patchDropBonk.isEnabled())
+		{
+			LogMessage("Un-patching FlagDropBonk at 0x%X..", g_patchDropBonk.Get(MemoryIndex_Address));
+			g_patchDropBonk.disable();
+		}
+
+		// User should reset cvars in server.cfg.
+
+		LogMessage("Stop that Tank!: Disabled");
+	}
+}
+
+bool Mod_CanBeLoaded()
+{
+	// Make a decision on whether the Stop that Tank! is enabled or not.
+	// 1. tank_enabled must be set to 1. If it is then it will check the map prefix..
+	// 2. The map must have one of the following prefixes: pl_, plr_, stt_.
+	// If both of these things are satisfied, then STT will attempt to run.
+	if(GetConVarBool(g_hCvarEnabled))
+	{
+		char map[PLATFORM_MAX_PATH];
+		GetMapName(map, sizeof(map));
+		if(strncmp(map, "pl_", 3, false) == 0 || strncmp(map, "plr_", 4, false) == 0 || strncmp(map, "stt_", 4, false) == 0)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void Mod_DetermineGameMode()
+{
+	eGameMode gameMode = GameMode_Tank; // Fall back on regular payload.
+
+	// First, look for the plr_ map prefix.
+	char map[PLATFORM_MAX_PATH];
+	GetMapName(map, sizeof(map));
+	if(strncmp(map, "plr_", 4, false) == 0)
+	{
+		gameMode = GameMode_Race;
+	}else if(FindEntityByClassname(MaxClients+1, "tf_logic_multiple_escort") > MaxClients) // Check for this plr_ specific entity.
+	{
+		gameMode = GameMode_Race;
+	}
+	
+	g_nGameMode = gameMode;
+#if defined DEBUG
+	PrintToServer("(Mod_DetermineGameMode) g_nGameMode = %d!", g_nGameMode);
+#endif
+}
+
+void Mod_ToggleTags(bool enable)
+{
+	if(!GetConVarBool(g_hCvarTags)) return;
+
+	char tags[512];
+	GetConVarString(g_cvar_sv_tags, tags, sizeof(tags));
+	if(enable)
+	{
+		// Stick the stt tag in sv_tags.
+		if(StrContains(tags, "stt") == -1)
+		{
+			// Tag doesn't exist so add it.
+			if(strlen(tags) < sizeof(tags)-6)
+			{
+				Format(tags, sizeof(tags), "%s,stt,", tags);
+				SetConVarString(g_cvar_sv_tags, tags);
+			}
+		}
+	}else{
+		// Make sure stt tag is removed from sv_tags.
+		if(StrContains(tags, "stt") > -1)
+		{
+			ReplaceString(tags, sizeof(tags), "stt", "");
+			SetConVarString(g_cvar_sv_tags, tags);
+		}
+	}
+}
+
+void GetMapName(char[] mapName, int maxlength)
+{
+	GetCurrentMap(mapName, maxlength);
+
+	// Parse the display name out of workshop maps.
+	int ugcPos;
+	if(strncmp(mapName, "workshop/", 9, true) == 0 && (ugcPos = StrContains(mapName, ".ugc", true)) > 9)
+	{
+		mapName[ugcPos] = '\0';
+		strcopy(mapName, maxlength, mapName[9]);
+	}
+}
+
+public MRESReturn CBaseEntity_PhysicsSolidMaskForEntity(int entity, Handle returnStruct)
+{
+	// This overridees the default value of: 33570827 or MASK_SOLID -> (CONTENTS_SOLID|CONTENTS_MOVEABLE|CONTENTS_WINDOW|CONTENTS_MONSTER|CONTENTS_GRATE)
+
+	// This prevents tank_boss from blocking other entities with physics based movement: func_tracktrain, func_movelinear, func_door, etc..
+	DHookSetReturn(returnStruct, CONTENTS_WATER);
+
+	return MRES_Supercede;
+}
+
+public void EntityOutput_TriggerTeleport(const char[] output, int caller, int activator, float delay)
+{
+	if(!g_bEnabled) return;
+	
+#if defined DEBUG
+	PrintToServer("(EntityOutput_TriggerTeleport) %s: caller = %d, activator = %d, delay = %f.", output, caller, activator, delay);
+#endif
+	// Make sure the giant doesn't come out of a trigger_teleport stuck.
+	int client = activator;
+	if(client >= 1 && client <= MaxClients && IsClientInGame(client))
+	{
+		if(g_nSpawner[client].g_bSpawnerEnabled && g_nSpawner[client].g_nSpawnerType != Spawn_Tank && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_bIsMiniBoss"))
+		{
+			// Ensure that player is not stuck after re-scaling.
+			float pos[3];
+			GetClientAbsOrigin(client, pos);
+			
+			float mins[3];
+			float maxs[3];
+			GetClientMins(client, mins);
+			GetClientMaxs(client, maxs);
+
+			int team = GetClientTeam(client);
+			int mask = MASK_RED;
+			if(team != TFTeam_Red) mask = MASK_BLUE;
+
+			TR_TraceHullFilter(pos, pos, mins, maxs, mask, TraceFilter_NotTeam, team);
+			if(TR_DidHit())
+			{
+#if defined DEBUG
+				PrintToServer("(EntityOutput_TriggerTeleport) Detected that %N may be stuck after minify spell!", client);
+#endif
+				// Player is probably stuck so teleport them to a new position
+				if(!Player_FindFreePosition2(client, pos, mins, maxs))
+				{
+#if defined DEBUG
+					PrintToServer("(EntityOutput_TriggerTeleport) Failed to find a free spot for %N!", client);
+#endif
+					//
+				}
+			}
+		}
+	}
+}
+
+// void CMonsterResource::SetBossStunPercentage(CMonsterResource *this, float)
+public MRESReturn CMonsterResource_SetBossHealthPercentage(int pThis, Handle hReturn, Handle hParams)
+{
+	if(g_bEnabled && g_bIsRoundStarted)
+	{
+		if(g_nGameMode == GameMode_Tank || (g_nGameMode == GameMode_BombDeploy && g_nTeamGiant[TFTeam_Blue].g_bTeamGiantActive && g_nTeamGiant[TFTeam_Blue].g_bTeamGiantNoCritCash))
+		{
+			// Block anything trying to update the monster_resource health bar.
+			return MRES_Supercede;
+		}
+	}
+
+	return MRES_Ignored;
+}
+
+public Action Tank_OnCanRecieveMedigunChargeEffect(int client, int medigunChargeType, bool &result)
+{
+	//PrintToServer("(Tank_OnCanRecieveMedigunChargeEffect) client=%N, medigunChargeType=%d", client, medigunChargeType);
+	if(!g_bEnabled) return Plugin_Continue;
+
+	// We are only able to block the stock uber effect with this detour so we don't need to worry about blocking other medigun charge effects.
+	// The default behavior will block the stock uber effect on bomb carriers due to a check for: CTFGameRules::m_bPlayingMannVsMachine.
+	if(g_nGameMode == GameMode_BombDeploy && g_iRefBombFlag != 0 && client >= 1 && client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == TFTeam_Blue)
+	{
+		// Check if the player is the bomb carrier.
+		int bomb = EntRefToEntIndex(g_iRefBombFlag);
+		if(bomb > MaxClients)
+		{
+			int carrier = GetEntPropEnt(bomb, Prop_Send, "moveparent");
+			if(carrier == client)
+			{
+				// This player is the bomb carrier.
+				// Allow uber effect on the bomb carrier.
+				result = true;
+
+				if(g_bombAtFinalCheckpoint)
+				{
+					if(medigunChargeType == -1 || medigunChargeType == MedigunChargeEffect_Uber || medigunChargeType == MedigunChargeEffect_Quickfix)
+					{
+						// Block uber effect for the special deploy in the cactus canyon finale.
+						result = false;
+
+						if(medigunChargeType == MedigunChargeEffect_Uber || medigunChargeType == MedigunChargeEffect_Quickfix)
+						{
+							PrintCenterText(client, "%t", "Tank_Center_CantPopUber");
+						}
+					}
+				}
+
+				return Plugin_Handled;
+			}else if(g_bombAtFinalCheckpoint && medigunChargeType == MedigunChargeEffect_Quickfix)
+			{
+				// Do not let the medic pop quick fix uber charge if they are healing the bomb carrier near the final deploy.
+				if(carrier >= 1 && carrier <= MaxClients && IsClientInGame(carrier) && GetClientTeam(carrier) == TFTeam_Blue)
+				{
+					int medigun = GetPlayerWeaponSlot(client, TFWeaponSlot_Secondary);
+					if(medigun > MaxClients && GetEntProp(medigun, Prop_Send, "m_iItemDefinitionIndex") == ITEM_QUICK_FIX && GetEntPropEnt(medigun, Prop_Send, "m_hHealingTarget") == carrier)
+					{
+						// Block quick fix uber pop.
+						result = false;
+
+						PrintCenterText(client, "%t", "Tank_Center_CantMegaHealCarrier");
+
+						return Plugin_Handled;
+					}
+				}
+			}
+		}
+	}
+
+	return Plugin_Continue;
+}
+
+int Tank_PrecacheModel(const char[] model)
+{
+	if(strlen(model) > 4)
+	{
+		if(FileExists(model, true))
+		{
+			return PrecacheModel(model);
+		}else{
+			LogMessage("Failed to precache model: %s", model);
+		}
+	}
+
+	return 0;
+}
+
+public void Output_TeamControlPointRound_OnStart(const char[] output, int caller, int activator, float delay)
+{
+	if(!g_bEnabled) return;
+
+#if defined DEBUG
+	char callerClass[32];
+	GetEdictClassname(caller, callerClass, sizeof(callerClass));
+	PrintToServer("(Output_TeamControlPointRound_OnStart) caller: %d(%s) activator: %d delay: %0.1f!", caller, callerClass, activator, delay);
+#endif
+
+	// Save a reference of the active team_control_point_round entity.
+	if(caller > MaxClients)
+	{
+		char className[32];
+		GetEdictClassname(caller, className, sizeof(className));	
+		if(strcmp(className, "team_control_point_round") == 0)
+		{
+			g_iRefRoundControlPoint = EntIndexToEntRef(caller);
+		}
+	}
+}
+
+public void Output_TeamControlPointRound_OnEnd(const char[] output, int caller, int activator, float delay)
+{
+	if(!g_bEnabled) return;
+
+#if defined DEBUG
+	PrintToServer("(Output_TeamControlPointRound_OnEnd) caller: %d activator: %d delay: %0.1f!", caller, activator, delay);
+#endif
+
+	g_iRefRoundControlPoint = 0;
+}
+
+public Action Event_WinPanel(Event event, const char[] name, bool dontBroadcast)
+{
+	if(!g_bEnabled) return Plugin_Continue;
+
+#if defined DEBUG
+	PrintToServer("(Event_WinPanel)");
+#endif
+
+	if(g_nGameMode != GameMode_BombDeploy) return Plugin_Continue;
+
+	// The win panel will show the last player that captured a control point in the 'Winning capture' space.
+	// Fix it so it credits the player that deployed the bomb, winning the round.
+	if(g_finalBombDeployer != 0)
+	{
+		int client = GetClientOfUserId(g_finalBombDeployer);
+		if(client >= 1 && client <= MaxClients && IsClientInGame(client))
+		{
+			char cappers[6];
+			cappers[0] = client;
+			event.SetString("cappers", cappers);
+		}
+	}
+
+	g_finalBombDeployer = 0;
+	return Plugin_Continue;
+}
+
+public void Event_PlayerHealOnHit(Event event, const char[] name, bool dontBroadcast)
+{
+	if(!g_bEnabled) return;
+
+	// Block the + particle from appearing over giants when they are healed.
+	int client = event.GetInt("entindex");
+	if(client >= 1 && client <= MaxClients && Spawner_HasGiantTag(client, GIANTTAG_BLOCK_HEALONHIT) && IsClientInGame(client) && GetEntProp(client, Prop_Send, "m_bIsMiniBoss"))
+	{
+		event.BroadcastDisabled = true;
+	}
+}
+
+void Deathpit_Boost(int client)
+{
+	float pos[3];
+	GetClientAbsOrigin(client, pos);
+	float ang[3];
+	GetClientEyeAngles(client, ang);
+
+	float vel[3];
+	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
+
+	float zMagnitude = FloatAbs(vel[2]);
+	float xyMagnitude = zMagnitude;
+
+	float vecForward[3];
+	GetAngleVectors(ang, vecForward, NULL_VECTOR, NULL_VECTOR);
+	NormalizeVector(vecForward, vecForward);
+	vecForward[2] = 1.0;
+	for(int i=0; i<3; i++) vecForward[i] *= 1.15;
+
+	float minZMagnitude = config.LookupFloat(g_hCvarGiantDeathpitMinZ);
+	if(g_nMapHack == MapHack_HightowerEvent && g_hellTeamWinner >= 2) minZMagnitude = 500.0;
+	float maxZMagnitude = 1500.0;
+	if(zMagnitude < minZMagnitude) zMagnitude = minZMagnitude;
+	else if(zMagnitude > maxZMagnitude) zMagnitude = maxZMagnitude;
+	
+	float minXyMagnitude = 400.0;
+	float maxXyMagnitude = 1000.0;
+	if(xyMagnitude < minXyMagnitude) xyMagnitude = minXyMagnitude;
+	else if(xyMagnitude > maxXyMagnitude) xyMagnitude = maxXyMagnitude;
+
+	for(int i=0; i<2; i++) vecForward[i] *= minXyMagnitude;
+	vecForward[2] *= zMagnitude;
+
+	/*
+	int removeMe;
+	PrintToServer("============================================");
+	PrintToServer("   m_vecVelocity = %1.2f %1.2f %1.2f", vel[0], vel[1], vel[2]);
+	PrintToServer("   zMagnitude = %1.2f, xyMagnitude = %1.2f", zMagnitude, xyMagnitude);
+	PrintToServer("   vecForward = %1.2f %1.2f %1.2f", vecForward[0], vecForward[1], vecForward[2]);
+	*/
+
+	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vecForward);
+
+	//StopSound(client, SNDCHAN_AUTO, SOUND_DEATHPIT_BOOST);
+	//EmitSoundToClient(client, SOUND_DEATHPIT_BOOST);
+	EmitSoundToAll(SOUND_DEATHPIT_BOOST, client);
+
+	int particle = -1;
+	if(GetClientTeam(client) == TFTeam_Red)
+	{
+		particle = g_iParticleJumpRed;
+	}else{
+		particle = g_iParticleJumpBlue;
+	}
+	
+	if(particle != -1)
+	{
+		TE_Particle(particle, pos);
+		TE_SendToAll();
+	}
+
+	TF2_AddCondition(client, TFCond_MegaHeal, 1.0);
+}
+
+void Bomb_ShowSkippedAnnotation(int client, int team, int indexCP)
+{
+	if(IsFakeClient(client)) return;
+	if(indexCP < 0 || indexCP >= MAX_LINKS) return;
+
+	int pathTrack = EntRefToEntIndex(g_iRefLinkedPaths[team][indexCP]);
+	if(pathTrack <= MaxClients) return;
+
+	// Send the player an annotation guiding them to the next control point.
+	Handle event = CreateEvent("show_annotation");
+	if(event != INVALID_HANDLE)
+	{
+		float pos[3];
+		GetEntPropVector(pathTrack, Prop_Send, "m_vecOrigin", pos);
+		pos[2] -= 20.0;
+
+		SetEventInt(event, "id", Annotation_BombCaptureSkipped);
+		SetEventFloat(event, "worldPosX", pos[0]);
+		SetEventFloat(event, "worldPosY", pos[1]);
+		SetEventFloat(event, "worldPosZ", pos[2]);
+		
+		SetEventInt(event, "visibilityBitfield", (1 << client)); // Only show to player carrying the bomb.
+
+		char text[256];		
+		Format(text, sizeof(text), "%T", "Tank_Annotation_SkippedControlPoint", client);
+		SetEventString(event, "text", text);
+
+		SetEventFloat(event, "lifetime", 10.0);
+		SetEventString(event, "play_sound", "coach/coach_attack_here.wav");
+		
+		FireEvent(event); // Frees the handle.
+	}
+}
+
+public Action Command_Explode(int client, int args)
+{
+	if(!g_bEnabled) return Plugin_Continue;
+
+	if(g_nGameMode != GameMode_Tank || !g_bIsRoundStarted)
+	{
+		ReplyToCommand(client, "This command may only be used during the Tank period.");
+		return Plugin_Handled;
+	}
+
+	int tank = EntRefToEntIndex(g_iRefTank[TFTeam_Blue]);
+	if(tank > MaxClients)
+	{
+		SetVariantInt(MAX_TANK_HEALTH);
+		AcceptEntityInput(tank, "RemoveHealth");
+
+		ShowActivity2(client, "[SM] ", "%N blew up the BLU Tank.", client);
+	}else{
+		ReplyToCommand(client, "Failed to destroy tank: Find to find BLU Tank.");
+	}
+
+	return Plugin_Handled;
+}
+
+void Tank_EnforceRespawnTimes()
+{
+	// Periodically update the respawn times in case the map tries to change the values (such as when a point is capped).
+
+	// Scale respawn times with player count.
+	int playerCount[MAX_TEAMS];
+	for(int i=1; i<=MaxClients; i++)
+	{
+		if(IsClientInGame(i))
+		{
+			int team = GetClientTeam(i);
+			if(team == TFTeam_Red || team == TFTeam_Blue)
+			{
+				playerCount[team]++;
+			}else{
+				playerCount[TFTeam_Spectator]++;
+			}
+		}
+	}
+	for(int i=0; i<sizeof(playerCount); i++) if(playerCount[i] < 1) playerCount[i] = 1;
+
+	float respawnScaleMin = config.LookupFloat(g_hCvarRespawnScaleMin);
+	float respawnBase = config.LookupFloat(g_hCvarRespawnBase);
+
+	float respawnGiant[MAX_TEAMS], respawnBombRed[MAX_TEAMS], respawnRace[MAX_TEAMS], respawnTank[MAX_TEAMS], respawnGiantTag[MAX_TEAMS];
+	for(int team=2; team<=3; team++)
+	{
+		// Get the base respawn time.
+		respawnGiant[team] = config.LookupFloat(g_hCvarRespawnGiant);
+		respawnBombRed[team] = config.LookupFloat(g_hCvarRespawnBombRed);
+		respawnRace[team] = config.LookupFloat(g_hCvarRespawnRace);
+		respawnTank[team] = config.LookupFloat(g_hCvarRespawnTank);
+		respawnGiantTag[team] = config.LookupFloat(g_hCvarRespawnGiantTag);
+
+		// Get the minimum respawn time when scaling for player count.
+		float respawnGiantMin = respawnGiant[team] * respawnScaleMin;
+		float respawnBombRedMin = respawnBombRed[team] * respawnScaleMin;
+		float respawnRaceMin = respawnRace[team] * respawnScaleMin;
+		float respawnTankMin = respawnTank[team] * respawnScaleMin;
+		float respawnGiantTagMin = respawnGiantTag[team] * respawnScaleMin;
+
+		// Get the respawn times scaled for player count.
+		respawnGiant[team] = float(playerCount[team]) / 12.0 * respawnGiant[team];
+		respawnBombRed[team] = float(playerCount[team]) / 12.0 * respawnBombRed[team];
+		respawnRace[team] = float(playerCount[team]) / 12.0 * respawnRace[team];
+		respawnTank[team] = float(playerCount[team]) / 12.0 * respawnTank[team];
+		respawnGiantTag[team] = float(playerCount[team]) / 12.0 * respawnGiantTag[team];
+
+		// Enforce a minimum respawn time for the scaled respawn times.
+		if(respawnGiant[team] < respawnGiantMin) respawnGiant[team] = respawnGiantMin;
+		if(respawnBombRed[team] < respawnBombRedMin) respawnBombRed[team] = respawnBombRedMin;
+		if(respawnRace[team] < respawnRaceMin) respawnRace[team] = respawnRaceMin;
+		if(respawnTank[team] < respawnTankMin) respawnTank[team] = respawnTankMin;
+		if(respawnGiantTag[team] < respawnGiantTagMin) respawnGiantTag[team] = respawnGiantTagMin;
+
+		// Scaled respawn times can never go lower than the base respawn time.
+		if(respawnGiant[team] < respawnBase) respawnGiant[team] = respawnBase;
+		if(respawnBombRed[team] < respawnBase) respawnBombRed[team] = respawnBase;
+		if(respawnRace[team] < respawnBase) respawnRace[team] = respawnBase;
+		if(respawnTank[team] < respawnBase) respawnTank[team] = respawnBase;
+		if(respawnGiantTag[team] < respawnBase) respawnGiantTag[team] = respawnBase;		
+	}
+	
+	TF2_SetRespawnTime(TFTeam_Blue, respawnBase);
+	TF2_SetRespawnTime(TFTeam_Red, respawnBase);
+
+	if(g_nGameMode == GameMode_Tank && g_bIsRoundStarted)
+	{
+		TF2_SetRespawnTime(TFTeam_Blue, respawnTank[TFTeam_Blue]);
+	}
+
+	if(g_nGameMode == GameMode_BombDeploy && g_bIsRoundStarted)
+	{
+		// RED needs a slightly higher respawn time during the bomb round since the hatch is usually right by RED spawn.
+		TF2_SetRespawnTime(TFTeam_Red, respawnBombRed[TFTeam_Red]);
+
+		// Give BLU a slightly higher respawn time when they have a Giant Robot out.
+		float engineTime = GetEngineTime();
+		bool giantOut = false;
+		for(int i=1; i<=MaxClients; i++)
+		{
+			if( g_nSpawner[i].g_bSpawnerEnabled && g_nSpawner[i].g_nSpawnerType == Spawn_GiantRobot && !(g_nGiants[g_nSpawner[i].g_iSpawnerGiantIndex].g_iGiantTags & GIANTTAG_SENTRYBUSTER)
+			 && g_nSpawner[i].g_flSpawnerTimeSpawned > 0.0 && engineTime - g_nSpawner[i].g_flSpawnerTimeSpawned > config.LookupFloat(g_hCvarBombGiantRespawnDelay)
+			 && IsClientInGame(i) && GetClientTeam(i) == TFTeam_Blue && IsPlayerAlive(i) && GetEntProp(i, Prop_Send, "m_bIsMiniBoss"))
+			{
+				giantOut = true;
+
+				if(g_nGiants[g_nSpawner[i].g_iSpawnerGiantIndex].g_iGiantTags & GIANTTAG_DONT_CHANGE_RESPAWN)
+				{
+					giantOut = false;
+
+					TF2_SetRespawnTime(TFTeam_Blue, respawnGiantTag[TFTeam_Blue]);
+					break;
+				}
+			}
+		}
+
+		if(giantOut)
+		{
+			TF2_SetRespawnTime(TFTeam_Blue, respawnGiant[TFTeam_Blue]);
+		}
+	}
+
+	if(g_nGameMode == GameMode_Race)
+	{
+		TF2_SetRespawnTime(TFTeam_Blue, respawnRace[TFTeam_Blue]);
+		TF2_SetRespawnTime(TFTeam_Red, respawnRace[TFTeam_Red]);
+
+		// Calculate if a team's tank has fallen behind.
+		float tankProgress[MAX_TEAMS];
+		for(int team=2; team<=3; team++)
+		{
+			int watcher = EntRefToEntIndex(g_iRefTrainWatcher[team]);
+			if(watcher > MaxClients)
+			{
+				tankProgress[team] = GetEntPropFloat(watcher, Prop_Send, "m_flTotalProgress");
+			}
+		}
+
+		int teamTankBehind = -1;
+		if(FloatAbs(tankProgress[TFTeam_Red] - tankProgress[TFTeam_Blue]) > config.LookupFloat(g_hCvarRespawnCartBehind))
+		{
+			teamTankBehind = (tankProgress[TFTeam_Red] < tankProgress[TFTeam_Blue]) ? TFTeam_Red : TFTeam_Blue;
+		}
+
+		// Calculate if a team has a Giant Robot advantage.
+		int numGiants[MAX_TEAMS];
+		for(int i=1; i<=MaxClients; i++)
+		{
+			if(IsClientInGame(i) && IsPlayerAlive(i) && g_nSpawner[i].g_bSpawnerEnabled && g_nSpawner[i].g_nSpawnerType == Spawn_GiantRobot && !(g_nGiants[g_nSpawner[i].g_iSpawnerGiantIndex].g_iGiantTags & GIANTTAG_SENTRYBUSTER)
+				&& GetEntProp(i, Prop_Send, "m_bIsMiniBoss"))
+			{
+				int team = GetClientTeam(i);
+				if(team >= 0 && team < MAX_TEAMS)
+				{
+					numGiants[team]++;
+				}
+			}
+		}
+
+		int teamWithAdvantage = -1;
+		int advantage = abs(numGiants[TFTeam_Red] - numGiants[TFTeam_Blue]);
+		if(advantage >= 1)
+		{
+			teamWithAdvantage = (numGiants[TFTeam_Red] > numGiants[TFTeam_Blue]) ? TFTeam_Red : TFTeam_Blue;
+		}
+		//PrintToServer("teamWithAdvantage = %d  teamTankBehind = %d", teamWithAdvantage, teamTankBehind);
+
+		// Adjust respawn time by taking into account Giant Robot advantage.
+		if(teamWithAdvantage != -1)
+		{
+			if(teamWithAdvantage == teamTankBehind)
+			{
+				// Has advantage, Tank behind.
+				// Let the normal respawn time scaled for player count carry over from above!
+			}else{
+				// Has advantage, Tank NOT behind.
+				int advantageCap = config.LookupInt(g_hCvarRespawnAdvCap);
+				if(advantageCap > 0)
+				{
+					int cap = advantage;
+					if(cap > advantageCap) cap = advantageCap;
+					float advRespawnTime = config.LookupFloat(g_hCvarRespawnAdvMult) * float(cap) + respawnRace[teamWithAdvantage];
+
+					TF2_SetRespawnTime(teamWithAdvantage, advRespawnTime);
+				}
+			}
+
+			// If the advantage is great enough, give the opposite team instant respawn as a sort of "anti-spawn camp" mechanic.
+			if(advantage >= config.LookupInt(g_hCvarRespawnAdvRunaway))
+			{
+				int oppositeTeam = (teamWithAdvantage == TFTeam_Red) ? TFTeam_Blue : TFTeam_Red;
+
+				TF2_SetRespawnTime(oppositeTeam, respawnBase); // Near instant respawn.
+			}
+		}
+
+		// Adjust respawn time by taking into account the difference in the Tank's progress.
+		if(teamTankBehind != -1)
+		{
+			if(teamTankBehind != teamWithAdvantage)
+			{
+				// Tank behind, no advantage.
+				TF2_SetRespawnTime(teamTankBehind, respawnBase); // Near instant respawn.
+			}
+		}
+	}
+
+	/*
+	// Useful for debugging respawn wave times.
+	int removeMe;
+	float waveRed = GameRules_GetPropFloat("m_TeamRespawnWaveTimes", TFTeam_Red);
+	float waveBlue = GameRules_GetPropFloat("m_TeamRespawnWaveTimes", TFTeam_Blue);
+	PrintCenterTextAll("Respawn times: RED = %1.2f BLU = %1.2f", waveRed, waveBlue);
+	*/
+}
+
+bool Bomb_CanPlayerDeploy(int client)
+{
+	if(TF2_IsPlayerInCondition(client, TFCond_Ubercharged)) return false;
+	if(TF2_IsPlayerInCondition(client, TFCond_UberchargedHidden)) return false;
+	if(TF2_IsPlayerInCondition(client, TFCond_UberchargedCanteen)) return false;
+	if(TF2_IsPlayerInCondition(client, TFCond_UberchargedOnTakeDamage)) return false;
+
+	if(TF2_IsPlayerInCondition(client, TFCond_MegaHeal)) return false;
+	if(TF2_IsPlayerInCondition(client, TFCond_Bonked)) return false;
+
+	return true;
+}
+
+/* A HUD bug prevents these messages from being seen if the player is healing or being healed.
+void SendHudNotification(int client, const char[] message, const char[] icon="ico_notify_partner_taunt", int background=0)
+{
+	Handle msg = StartMessageOne("HudNotifyCustom", client, USERMSG_BLOCKHOOKS);
+	if(msg != null)
+	{
+		BfWriteString(msg, message);
+		BfWriteString(msg, icon);
+		BfWriteByte(msg, background);
+
+		EndMessage();
+	}
+}
+*/
+
+public Action Event_ChargeDeployed(Handle hEvent, const char[] strEventName, bool bDontBroadcast)
+{
+	if(!g_bEnabled) return Plugin_Continue;
+
+	bool isSetup = Tank_IsInSetup();
+
+	// Block the "chargedeployed" log action to prevent stats point farming.
+	if(isSetup) g_blockLogAction = isSetup;
+
+	int client = GetClientOfUserId(GetEventInt(hEvent, "userid"));
+	if(client >= 1 && client <= MaxClients && IsClientInGame(client))
+	{
+		int medigun = GetPlayerWeaponSlot(client, WeaponSlot_Secondary);
+		if(medigun > MaxClients)
+		{
+			int def = GetEntProp(medigun, Prop_Send, "m_iItemDefinitionIndex");
+
+			if(isSetup && def != ITEM_VACCINATOR)
+			{
+				// This will cancel out the 1 point awarded for deploying an uber.
+				Tank_IncrementStat(client, TFStat_PlayerInvulnerable, -1);
+			}
+
+			// Vaccinator ubers seem to not have any effect while healing revive markers outside of MVM. This fixes that.
+			if(def == ITEM_VACCINATOR)
+			{
+				int marker = GetEntPropEnt(medigun, Prop_Send, "m_hHealingTarget");
+				if(marker > MaxClients)
+				{
+					char classname[24];
+					GetEdictClassname(marker, classname, sizeof(classname));
+					if(strcmp(classname, "entity_revive_marker") == 0)
+					{
+#if defined DEBUG
+						PrintToServer("(Event_ChargeDeployed) %N used a vac uber while reviving, fast reviving..", client);
+#endif
+						int maxHealth = GetEntProp(marker, Prop_Send, "m_iMaxHealth");
+						int health = GetEntProp(marker, Prop_Send, "m_iHealth");
+
+						// Heal 90% or so of the revive marker's health when a vac uber is popped.
+						health += RoundToCeil(float(maxHealth) * config.LookupFloat(g_hCvarReanimatorVacUber));
+						if(health >= maxHealth) health = maxHealth-1;
+
+						SetEntProp(marker, Prop_Send, "m_iHealth", health);
+					}
+				}
+			}
+		}
+	}
+
+	return Plugin_Continue;
+}
+
+public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] weaponname, bool &result)
+{
+	if(client >= 1 && client <= MaxClients && Spawner_HasGiantTag(client, GIANTTAG_GUNSLINGER_COMBO) && IsClientInGame(client) && GetEntProp(client, Prop_Send, "m_bIsMiniBoss") && IsPlayerAlive(client))
+	{
+		int melee = GetPlayerWeaponSlot(client, WeaponSlot_Melee);
+		if(melee > MaxClients && melee == weapon)
+		{
+			// Award a critical for every 3 successive melee strikes for the "gunslinger_combo" giant template tag.
+			if(g_numSuccessiveHits[client] >= 1 && g_timeNextMeleeAttack[client] != 0.0 && GetGameTime() < g_timeNextMeleeAttack[client])
+			{
+#if defined DEBUG
+				PrintToServer("(TF2_CalcIsAttackCritical) %N triggered a gunslinger combo crit (%d)!", client, g_numSuccessiveHits[client]);
+#endif
+				result = true;
+				return Plugin_Changed;
+			}
+		}
+	}
+
+	return Plugin_Continue;
+}
+
+bool IsValidAddress(Address addr)
+{
+	if(addr == Address_Null) return false;
+
+	return true;
+}
+
+public void NextFrame_AttachToFlare(int ref)
+{
+	if(g_iParticleFlareTrail == -1) return;
+
+	int flare = EntRefToEntIndex(ref);
+	if(flare <= MaxClients) return;
+
+	int client = GetEntPropEnt(flare, Prop_Send, "m_hOwnerEntity");
+	if(client >= 1 && client <= MaxClients && Spawner_HasGiantTag(client, GIANTTAG_JULY4) && IsClientInGame(client) && GetEntProp(client, Prop_Send, "m_bIsMiniBoss"))
+	{
+		// Attach a trail particle to the flare projectile.
+		float pos[3];
+		GetEntPropVector(flare, Prop_Send, "m_vecOrigin", pos);
+
+		TE_Particle(g_iParticleFlareTrail, pos, NULL_VECTOR, NULL_VECTOR, flare, 1, 0, false);
+		TE_SendToAll();
+	}
+}
+
+public Action TempEntHook_ParticleEffect(const char[] te_name, int[] players, int numPlayers, float delay)
+{
+	if(!g_bEnabled) return Plugin_Continue;
+
+	// Track the two cases when a detonator flare expires.
+	g_flareExplodeReason = FlareExplode_Unknown;
+	int particleIndex = TE_ReadNum("m_iParticleSystemIndex");
+	if(particleIndex != -1)
+	{
+		if(particleIndex == g_iParticleFlareMidAir)
+		{
+			g_flareExplodeReason = FlareExplode_Detonated;
+		}else if(particleIndex == g_iParticleFlareFlyingEmbers)
+		{
+			g_flareExplodeReason = FlareExplode_Collision;
+		}
+	}
+
+	return Plugin_Continue;
+}
+
+void Outline_DrawBoundaries(int client=0, const float mins[3], const float maxs[3], const float origin[3])
+{
+	float corners[4][2];
+	corners[0][0] = mins[0]; corners[0][1] = mins[1];
+	corners[1][0] = mins[0]; corners[1][1] = maxs[1];
+	corners[3][0] = maxs[0]; corners[3][1] = mins[1];
+	corners[2][0] = maxs[0]; corners[2][1] = maxs[1];
+
+	static const int color[4] = {255, 62, 150, 240};
+
+	// Draw the upper corners.
+	for(int i=0; i<sizeof(corners); i++)
+	{
+		float start[3], end[3];
+		for(int j=0; j<2; j++)
+		{
+			start[j] = corners[i][j] + origin[j];
+			end[j] = corners[(i+1)%sizeof(corners)][j] + origin[j];
+		}
+		start[2] = end[2] = maxs[2] + origin[2];
+
+		//TE_SetupBeamPoints(const Float:start[3], const Float:end[3], ModelIndex, HaloIndex, StartFrame, FrameRate, Float:Life, Float:Width, Float:EndWidth, FadeLength, Float:Amplitude, const Color[4], Speed)
+		TE_SetupBeamPoints(start, end, g_iSpriteBeam, 0, 0, 15, 1.5, 5.0, 5.0, 5, 0.1, color, 1);
+		if(client == 0)
+		{
+			TE_SendToAll();
+		}else{
+			TE_SendToClient(client);
+		}
+	}
+
+	// Draw the walls.
+	for(int i=0; i<sizeof(corners); i++)
+	{
+		float start[3], end[3];
+		for(int j=0; j<2; j++)
+		{
+			start[j] = end[j] = corners[i][j] + origin[j];
+		}
+		start[2] = maxs[2] + origin[2];
+		end[2] = mins[2] + origin[2];
+
+		TE_SetupBeamPoints(start, end, g_iSpriteBeam, 0, 0, 15, 1.5, 5.0, 5.0, 5, 0.1, color, 1);
+		if(client == 0)
+		{
+			TE_SendToAll();
+		}else{
+			TE_SendToClient(client);
+		}
+	}	
+}
+
+void CaptureTriggers_Outline(int client=0, int captureArea, int team)
+{
+	float et = GetEngineTime();
+	if(g_timeCaptureOutline[team] == 0.0) g_timeCaptureOutline[team] = et;
+
+	if(et - g_timeCaptureOutline[team] < 1.0) return;
+
+	// Draw a beam around the boundaries of the trigger_capture_area.
+	float mins[3];
+	float maxs[3];
+	GetEntPropVector(captureArea, Prop_Send, "m_vecMins", mins);
+	Get
