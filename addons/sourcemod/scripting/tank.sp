@@ -1009,7 +1009,29 @@ enum struct eTankRankStruct
 	int g_tankRankNumKills;
 	char g_tankRankName[TANKRANK_NAME_MAXLEN];
 }
-eTankRankStruct g_tankRank[20];
+
+eTankRankStruct g_tankRank[] = {
+	{50, "Unremarkable"},
+	{150, "Scarcely Lethal"},
+	{250, "Mildly Menacing"},
+	{400, "Somewhat Threatening"},
+	{600, "Uncharitable"},
+	{800, "Notably Dangerous"},
+	{1024, "Sufficiently Lethal"},
+	{1300, "Truly Feared"},
+	{1650, "Spectacularly Lethal"},
+	{2048, "Gore-Spattered"},
+	{3000, "Wicked Nasty"},
+	{4500, "Positively Inhumane"},
+	{5999, "Totally Ordinary"},
+	{6000, "Face-Melting"},
+	{8850, "Rage-Inducing"},
+	{15000, "Server-Clearing"},
+	{30000, "Epic"},
+	{40000, "Legendary"},
+	{45000, "Australian"},
+	{50000, "Hale's Own"}
+};
 
 bool g_hasSteamTools = false;
 bool g_hasSendProxy = false;
