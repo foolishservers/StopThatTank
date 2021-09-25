@@ -9860,10 +9860,41 @@ void Bomb_Think(int iBomb)
 	GetEntPropVector(client, Prop_Send, "m_vecOrigin", flPosPlayer);
 	bool bIsGiantCarrying = view_as<bool>(GetEntProp(client, Prop_Send, "m_bIsMiniBoss"));
 
+	float flSpeedBonus;
+	if(!Tank_GetAttributeValue(client, ATTRIB_MOVE_SPEED_BONUS, flSpeedBonus))
+	{
+		Tank_SetAttributeValue(client, ATTRIB_MOVE_SPEED_BONUS, config.LookupFloat(g_hCvarBombMoveSpeed));
+		TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.001);
+	}
+
+	float value;
+	for(int slot=0; slot<3; slot++)
+	{
+		int weapon = GetPlayerWeaponSlot(client, slot);
+		
+		if(weapon < MaxClients) continue;
+			
+		if(!Tank_GetAttributeValue(weapon, 252, value))
+		{
+			Tank_SetAttributeValue(weapon, 252, 0.0);
+		}
+		
+		if(!Tank_GetAttributeValue(weapon, 329, value))
+		{
+			Tank_SetAttributeValue(weapon, 329, 0.0);
+		}
+		
+		if(!Tank_GetAttributeValue(weapon, 405, value))
+		{
+			Tank_SetAttributeValue(weapon, 405, 0.0);
+		}
+	}
+	
 	// custom: add buff banner to carrier and the carrier radius
 	TF2_AddCondition(client, TFCond_Buffed, 0.2);
-	TF2_AddCondition(client, TFCond_MiniCritOnKill, 0.2);
+	TF2_AddCondition(client, TFCond_DefenseBuffed, 0.2);
 	TF2_AddCondition(client, TFCond_RegenBuffed, 0.2);
+	
 	float flTempPlayer[3];
 	for(int i = 1; i <= MaxClients; i++)
 	{
@@ -9872,9 +9903,7 @@ void Bomb_Think(int iBomb)
 			GetEntPropVector(i, Prop_Send, "m_vecOrigin", flTempPlayer);
 			if(GetVectorDistance(flPosPlayer, flTempPlayer) < (bIsGiantCarrying ? 390.0 : 190.0))
 			{
-				TF2_AddCondition(i, TFCond_Buffed, 0.2);
-				TF2_AddCondition(i, TFCond_MiniCritOnKill, 0.2);
-				TF2_AddCondition(i, TFCond_RegenBuffed, 0.2);
+				TF2_AddCondition(i, TFCond_DefenseBuffed, 0.2);
 			}
 		}
 	}
@@ -10609,23 +10638,29 @@ void Bomb_ClearMoveBonus()
 				}
 			}
 			
-			// custom: them attribs needs to die
-			int wepwepwep = GetPlayerWeaponSlot(i, 2);
-			if(Tank_GetAttributeValue(wepwepwep, 252, value))
+			float value2;
+	
+			for(int slot=0; slot<3; slot++)
 			{
-				Tank_RemoveAttribute(wepwepwep, 252);
+				int weapon = GetPlayerWeaponSlot(i, slot);
+				if(weapon < MaxClients) continue;
+				
+				if(Tank_GetAttributeValue(weapon, 252, value2))
+				{
+					Tank_RemoveAttribute(weapon, 252);
+				}
+		
+				if(Tank_GetAttributeValue(weapon, 329, value2))
+				{
+					Tank_RemoveAttribute(weapon, 329);
+				}
+		
+				if(Tank_GetAttributeValue(weapon, 405, value2))
+				{
+					Tank_RemoveAttribute(weapon, 405);
+				}
 			}
 			
-			if(Tank_GetAttributeValue(wepwepwep, 329, value))
-			{
-				Tank_RemoveAttribute(wepwepwep, 329);
-			}
-			
-			if(Tank_GetAttributeValue(wepwepwep, 405, value))
-			{
-				Tank_RemoveAttribute(wepwepwep, 405);
-			}
-
 			// Remove the MvM defense buff on the player
 			TF2_RemoveCondition(i, TFCond_DefenseBuffNoCritBlock);
 		}
@@ -10957,13 +10992,10 @@ public void Bomb_OnRobotPickup(const char[] output, int caller, int activator, f
 			// Nerf: Robot carriers move slower
 			Tank_SetAttributeValue(client, ATTRIB_MOVE_SPEED_BONUS, config.LookupFloat(g_hCvarBombMoveSpeed));
 			TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.001);
-			// custom: knockback nerf
-			int wepwepwep = GetPlayerWeaponSlot(client, 2);
-			Tank_SetAttributeValue(wepwepwep, 252, 1.0);
-			Tank_SetAttributeValue(wepwepwep, 329, 1.0);
-			Tank_SetAttributeValue(wepwepwep, 405, 1.0);
+			
 			// Nerf: Robot carriers cannot rocket/sticky jump
 			Tank_SetAttributeValue(client, ATTRIB_SELF_DMG_PUSH_FORCE_DECREASE, 0.1);
+			
 			// Because we are applying this attribute on the player entity, we need to refresh the attributes on any weapons that might be hooking this attribute.
 			for(int i=0; i<3; i++)
 			{
