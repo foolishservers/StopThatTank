@@ -9866,6 +9866,11 @@ void Bomb_Think(int iBomb)
 		Tank_SetAttributeValue(client, ATTRIB_MOVE_SPEED_BONUS, config.LookupFloat(g_hCvarBombMoveSpeed));
 		TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.001);
 	}
+	
+	// custom: add buff banner to carrier and the carrier radius
+	TF2_AddCondition(client, TFCond_Buffed, 0.2);
+	TF2_AddCondition(client, TFCond_DefenseBuffed, 0.2);
+	if(!bIsGiantCarrying) TF2_AddCondition(client, TFCond_RegenBuffed, 0.2);
 
 	float value;
 	for(int slot=0; slot<3; slot++)
@@ -9888,12 +9893,13 @@ void Bomb_Think(int iBomb)
 		{
 			Tank_SetAttributeValue(weapon, 405, 0.0);
 		}
+		
+		if(!Tank_GetAttributeValue(weapon, 57, value))
+		{
+			if(bIsGiantCarrying) Tank_SetAttributeValue(weapon, 57, 50.0);
+			else Tank_SetAttributeValue(weapon, 57, 17.0);
+		}
 	}
-	
-	// custom: add buff banner to carrier and the carrier radius
-	TF2_AddCondition(client, TFCond_Buffed, 0.2);
-	TF2_AddCondition(client, TFCond_DefenseBuffed, 0.2);
-	TF2_AddCondition(client, TFCond_RegenBuffed, 0.2);
 	
 	float flTempPlayer[3];
 	for(int i = 1; i <= MaxClients; i++)
@@ -10659,6 +10665,11 @@ void Bomb_ClearMoveBonus()
 				{
 					Tank_RemoveAttribute(weapon, 405);
 				}
+				
+				if(Tank_GetAttributeValue(weapon, 57, value2))
+				{
+					Tank_RemoveAttribute(weapon, 57);
+				}
 			}
 			
 			// Remove the MvM defense buff on the player
@@ -11000,7 +11011,10 @@ public void Bomb_OnRobotPickup(const char[] output, int caller, int activator, f
 			for(int i=0; i<3; i++)
 			{
 				int weapon = GetPlayerWeaponSlot(client, i);
-				if(weapon > MaxClients) Tank_ClearCache(weapon);
+				if(weapon > MaxClients) 
+				{
+					Tank_ClearCache(weapon);
+				}
 			}
 		}
 
@@ -11066,7 +11080,7 @@ void ApplyBombCarrierEffects(int client)
 		case 1: // minicrits
 		{
 			if(TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_RemoveCondition(client, TFCond_CritOnFlagCapture);
-			if(TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_RemoveCondition(client, TFCond_DefenseBuffNoCritBlock);
+			//if(TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_RemoveCondition(client, TFCond_DefenseBuffNoCritBlock);
 			
 			if(!TF2_IsPlayerInCondition(client, TFCond_Buffed)) TF2_AddCondition(client, TFCond_Buffed, -1.0, client);
 		}
@@ -11075,7 +11089,7 @@ void ApplyBombCarrierEffects(int client)
 			if(TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_RemoveCondition(client, TFCond_CritOnFlagCapture);
 			
 			if(!TF2_IsPlayerInCondition(client, TFCond_Buffed)) TF2_AddCondition(client, TFCond_Buffed, -1.0, client);
-			if(!TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_AddCondition(client, TFCond_DefenseBuffNoCritBlock, -1.0);	// This is the defense buff that MvM uses, resistance to crits.
+			//if(!TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_AddCondition(client, TFCond_DefenseBuffNoCritBlock, -1.0);	// This is the defense buff that MvM uses, resistance to crits.
 		}
 		case 3: // crits, defense buffs
 		{
@@ -11087,12 +11101,12 @@ void ApplyBombCarrierEffects(int client)
 			}
 
 			if(!TF2_IsPlayerInCondition(client, TFCond_Buffed)) TF2_AddCondition(client, TFCond_Buffed, -1.0, client); // For players that use the Cow Mangler.
-			if(!TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_AddCondition(client, TFCond_DefenseBuffNoCritBlock, -1.0);	// This is the defense buff that MvM uses, resistance to crits.
+			//if(!TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_AddCondition(client, TFCond_DefenseBuffNoCritBlock, -1.0);	// This is the defense buff that MvM uses, resistance to crits.
 		}
 		default:
 		{
 			if(TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_RemoveCondition(client, TFCond_CritOnFlagCapture);
-			if(TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_RemoveCondition(client, TFCond_DefenseBuffNoCritBlock);
+			//if(TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_RemoveCondition(client, TFCond_DefenseBuffNoCritBlock);
 			if(TF2_IsPlayerInCondition(client, TFCond_Buffed) && g_lastBombTier != tier)
 			{
 				TF2_RemoveCondition(client, TFCond_Buffed);

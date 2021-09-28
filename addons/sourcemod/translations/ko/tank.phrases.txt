@@ -1,0 +1,352 @@
+"Phrases"
+{
+	"Tank_Chat_Health_Multiplier"
+	{
+		"#format"		"{1:s},{2:c},{3:c},{4:s}"
+		"ko"			"{1}탱크{2} 체력 {3}x{4}배 증가"
+	}
+	"Tank_Chat_Inbound_Single"
+	{
+		"#format"		"{1:s},{2:c},{3:s},{4:d},{5:c}"
+		"ko"			"{1}탱크{2}가 옵니다: {3}{4}{5} HP"
+	}
+	"Tank_Chat_Inbound_Multiple"
+	{
+		"#format"		"{1:s},{2:c},{3:s},{4:c}"
+		"ko"			"{1}탱크{2}가 옵니다: 적의{3} 탱크를{4} 공격하여 느리게 만드세요!"
+	}
+	"Tank_Chat_TeamScramble_Triggered"
+	{
+		"#format"		"{1:c},{2:s},{3:c}"
+		"ko"			"{2}팀 섞기{1}가{3} 발동되었습니다!"
+	}
+	"Tank_Chat_TankDeploy"
+	{
+		"#format"		"{1:s},{2:c},{3:s},{4:d},{5:c},{6:d}"
+		"ko"			"{1}탱크{2}가 {3}{4}{5} HP ({6}%%)를 남기고 배달했습니다!"
+	}
+	"Tank_Chat_Giant_WillSpawnAt_ControlPoint"
+	{
+		"#format"		"{1:c},{2:s},{3:c},{4:c},{5:d},{6:c},{7:s},{8:d},{9:c}"
+		"ko"			"{1}다음 {2}거대 로봇{3}이 {4}{5}{6} 초 후에 {7}제 {8} 점령 지점{9}에서 스폰됩니다."
+	}
+	"Tank_Chat_Giant_WillSpawnAt_Start"
+	{
+		"#format"		"{1:c},{2:s},{3:c},{4:c},{5:d},{6:c},{7:s},{8:c}"
+		"ko"			"{1}다음 {2}거대 로봇{3}이 {4}{5}{6} 초 후에 {7}가동{8}됩니다."
+	}
+	"Tank_Chat_Tank_MVP"
+	{
+		"#format"		"{1:s},{2:c},{3:s},{4:N},{5:s},{6:d},{7:c},{8:c},{9:d}"
+		"ko"			"{1}탱크{2} MVP: {3}{4} {5}{6}{7} HP {8}{9}%%"
+	}
+	"Tank_Chat_BombSpawned_AtCart"
+	{
+		"#format"		"{1:c},{2:s},{3:c}"
+		"ko"			"{2}폭탄{1}이{3} 수레에서 나타났습니다!"
+	}
+	"Tank_Chat_Tank_PassedCheckpoint_Health"
+	{
+		"#format"		"{1:s},{2:c},{3:s},{4:c},{5:c},{6:d},{7:c}"
+		"ko"			"{1}탱크가 {3}점령 지점{4} {2}을 통과했습니다 : {5}+{6}{7} HP"
+	}
+	"Tank_Chat_Tank_PassedCheckpoint"
+	{
+		"#format"		"{1:s},{2:c},{3:s},{4:c}"
+		"ko"			"{1}탱크가 {3}점령 지점{4}{2}을 통과했습니다"
+	}
+	"Tank_Chat_TankKS_Kills_Mk"
+	{
+		"#format"		"{1:s},{2:s},{3:d},{4:c},{5:d}"
+		"ko"			"{1}{2} 탱크 마크.{3}{4} - 처치 수: {5}"
+	}
+	"Tank_Chat_TankKS_NewRank_Mk"
+	{
+		"#format"		"{1:c},{2:s},{3:s},{4:d},{5:c}"
+		"ko"			"{1}탱크가 새로운 등급에 올랐습니다: {2}{3} 마크.{4}{5}!"
+	}
+	"Tank_GameText_TankKS_NewRank_Mk"
+	{
+		"#format"		"{1:s},{2:d}"
+		"ko"			"탱크가 새로운 등급에 올랐습니다: {1} 마크.{2}!"
+	}
+	"Tank_Chat_TankKS_Kills"
+	{
+		"#format"		"{1:s},{2:s},{3:c},{4:d}"
+		"ko"			"{1}{2} 탱크{3} - 처치 수: {4}"
+	}
+	"Tank_Chat_TankKS_NewRank"
+	{
+		"#format"		"{1:c},{2:s},{3:s},{4:c}"
+		"ko"			"{1}탱크가 새로운 등급에 올랐습니다: {2}{3}{4}!"
+	}
+	"Tank_GameText_TankKS_NewRank"
+	{
+		"#format"		"{1:s}"
+		"ko"			"탱크가 새로운 등급에 올랐습니다: {1}!"
+	}
+	"Tank_Chat_RestartingRound"
+	{
+		"#format"		"{1:c}"
+		"ko"			"{1}모든 플레이어가 나가서 라운드를 재시작 합니다!"
+	}
+	"Tank_Chat_BombDeploy"
+	{
+		"#format"		"{1:s},{2:N},{3:c},{4:s},{5:d},{6:c},{7:d}"
+		"ko"			"{1}{2} 이(가) {4}{5}{6} HP ({7}%%)를 남기고 폭탄을 배달했습니다!"
+	}
+	"Tank_Chat_Passed_1"
+	{
+		"#format"		"{1:c},{2:s},{3:c},{4:s},{5:c}"
+		"ko"			"{1}다음 대기열이 올 때 까지 {2}거대 로봇{3}이나 {4}센트리 버스터{5}가 되지 않습니다."
+	}
+	"Tank_Chat_Passed_2"
+	{
+		"#format"		"{1:c}"
+		"ko"			"{1}/pass 입력시 거대 로봇 대기열에 들어갑니다."
+	}
+	"Tank_Chat_NotPassed_1"
+	{
+		"#format"		"{1:c},{2:s},{3:c},{4:s},{5:c}"
+		"ko"			"{1}다음 대기열이 올 때 {2}거대 로봇{3}이나 {4}센트리 버스터{5}가 됩니다."
+	}
+	"Tank_Chat_NotPassed_2"
+	{
+		"#format"		"{1:c}"
+		"ko"			"{1}/pass 입력시 거대 로봇 대기열에 나갑니다."
+	}
+	"Tank_Chat_UsedTeleporter"
+	{
+		"#format"		"{1:c},{2:s},{3:N},{4:c}"
+		"ko"			"{2}{3}{4}{1}의 텔레포터를 사용했습니다!"
+	}
+	"Tank_Chat_UsedTeleporter_NoBuilder"
+	{
+		"#format"		"{1:c}"
+		"ko"			"{1}텔레포트 되었습니다!"
+	}
+	"Tank_Chat_Tip"
+	{
+		"#format"		"{1:s},{2:c},{3:s}"
+		"ko"			"{1}팁:{2} {3}"
+	}
+	"Tank_Chat_RareBug_Badwater"
+	{
+		"#format"		"{1:c},{2:s},{3:c},{4:s},{5:c}"
+		"ko"			"{2}탱크{1}가{3} 거의 마지막에 파괴되었습니다. {4}승자{5}를 고릅니다.."
+	}
+	"Tank_Chat_FailSafe_BombDeploy"
+	{
+		"#format"		"{1:c},{2:s},{3:c}"
+		"ko"			"{1}라운드가 지금쯤 끝났어야 하는데.. {4}승자{5}를 고릅니다.."
+	}
+	"Tank_Chat_Buster_Queued"
+	{
+		"#format"		"{1:c},{2:s},{3:c},{4:s},{5:N},{6:c}"
+		"ko"			"{1}다음 {2}센트리 버스터{3}는 {4}{5}{6}가 됩니다."
+	}
+	"Tank_Chat_Buster_Next_NoOne"
+	{
+		"#format"		"{1:c},{2:s},{3:c}"
+		"ko"			"{1}아무도 {2}센트리 버스터{3}가 되고 싶지 않습니다."
+	}
+	"Tank_Center_Buster_YouAreNext"
+	{
+		"ko"			"다음 센트리 버스터로 선택 되었습니다! 거절하려면, /pass 를 입력하세요."
+	}
+	"Tank_Chat_Buster_AutoPassed"
+	{
+		"#format"		"{1:s},{2:c},{3:c},{4:s},{5:c}"
+		"ko"			"{1}센트리 버스터{2}가 자동으로 넘겨졌습니다: {3}{4}{5}."
+	}
+	"Tank_Chat_Buster_Warning"
+	{
+		"#format"		"{1:c},{2:s},{3:c},{4:c},{5:d},{6:c},{7:c},{8:c}"
+		"ko"			"{4}{5} 초 후에 {2}센트리 버스터{6}가 됩니다! {1}거절하려면, {7}/pass {8}를 입력하세요."
+	}
+	"Tank_Annotation_Buster_Warning"
+	{
+		"#format"		"{1:d}"
+		"ko"			"{1}초 후에 센트리 버스터가 됩니다! 거절하려면, /pass 를 입력하세요."
+	}
+	"Tank_Chat_Giant_Spawned"
+	{
+		"#format"		"{1:s},{2:N},{3:c},{4:s},{5:s},{6:s},{7:d},{8:c}"
+		"ko"			"{1}{2}{3} 발진: {4}{5}  {6}{7}{8} HP"
+	}
+	"Tank_Chat_Giant_Warning"
+	{
+		"#format"		"{1:c},{2:s},{3:c},{4:c},{5:d},{6:c}"
+		"ko"			"{4}{5}{3} 초 후에 {2}거대 로봇{6}이 됩니다! {1}거절하려면, /pass 를 입력하세요."
+	}
+	"Tank_Annotation_Giant_Warning"
+	{
+		"#format"		"{1:d}"
+		"ko"			"{1}초 후에 거대 로봇이 됩니다! 거절하려면, /pass 를 입력하세요."
+	}
+	"Tank_Chat_Giant_AFK"
+	{
+		"#format"		"{1:c},{2:s},{3:N},{4:c}"
+		"ko"			"{1}거대 로봇 {2}{3}{4}이 잠수인 상태로 나타났습니다..."
+	}
+	"Tank_Chat_Giant_MVP"
+	{
+		"#format"		"{1:c},{2:s},{3:N},{4:c},{5:s},{6:s},{7:N},{8:s},{9:d},{10:c},{11:c},{12:d}"
+		"ko"			"{1}거대 로봇 {2}{3}{4} {5}. MVP: {6}{7} {8}{9}{10} HP {11}{12}%%"
+	}
+	"Tank_Chat_RageMeter_Expired"
+	{
+		"#format"		"{1:c}"
+		"ko"			"{1}플레이어에게 피해를 주지 않아 분노 게이지가 바닥났습니다!"
+	}
+	"Tank_Center_Backstabbed"
+	{
+		"ko"			"!!!!!! 백스탭 당했습니다 !!!!!"
+	}
+	"Tank_Center_SuperSpyHint"
+	{
+		"ko"			"으악! 적을 백스텝하여 체력을 회복하세요."
+	}
+	"Tank_Annotation_Bomb_Spawned"
+	{
+		"ko"			"폭탄이 구역을 통과했습니다!"
+	}
+	"Tank_Annotation_Bomb_MovedBack"
+	{
+		"ko"			"폭탄이 되돌아갔습니다."
+	}
+	"Tank_Annotation_Bomb_PickupHint_Giant"
+	{
+		"ko"			"폭탄을 다시 가져오세요!"
+	}
+	"Tank_Annotation_Bomb_PickupHint"
+	{
+		"ko"			"폭탄이 되돌아가기 전에 집으세요!"
+	}
+	"Tank_Annotation_Borneo_Detour"
+	{
+		"ko"			"들어갈 수가 없어요! 돌아가세요.\n계단을 올라가서 오른쪽으로 도세요. →"
+	}
+	"Tank_Annotation_CactusCanyon_Hint"
+	{
+		"ko"			"여기서 기차를 기다리세요.\n폭탄을 터뜨리도록 놔둬요."
+	}
+	"Tank_Annotation_Deploy"
+	{
+		"ko"			"폭탄을 여기에 배달하세요!"
+	}
+	"Tank_Annotation_Capture"
+	{
+		"ko"			"거점을 점령하세요"
+	}
+	"Tank_Annotation_Buster_Hint"
+	{
+		"ko"			"자폭하려면 공격하거나 도발 하세요!"
+	}
+	"Tank_Annotation_Giant_Spawned"
+	{
+		// This message shows when a team giant spawns.
+		// Right now it passes the giant's name from the template file.
+		"#format"		"{1:s}"
+		"ko"			"{1}"
+	}
+	"Tank_Annotation_Giant_Spawned_BombDeploy"
+	{
+		"#format"		"{1:s}"
+		"ko"			"{1}이(가) 폭탄을 가졌습니다!"
+	}
+	"Tank_Annotation_SkippedControlPoint"
+	{
+		"ko"			"뒤돌아 멍청아!\n거점을 먼저 점령하십시오!"
+	}
+	"Tank_Menu_Settings_Title"
+	{
+		"ko"			"스탑 댓 탱크 설정"
+	}
+	"Tank_Menu_Settings_ShowGiantInfoPanel"
+	{
+		"#format"		"{1:T}"
+		"ko"			"거대 로봇 정보 패널: {1}"
+	}
+	"Tank_Menu_Settings_ShowGiantInfoPanel_State_AlwaysShow"
+	{
+		"ko"			"모두 보기"
+	}
+	"Tank_Menu_Settings_ShowGiantInfoPanel_State_PayloadOnly"
+	{
+		"ko"			"수레 맵에서만"
+	}
+	"Tank_Menu_Settings_ShowGiantInfoPanel_State_PayloadRaceOnly"
+	{
+		"ko"			"수레 경주 맵에서만"
+	}
+	"Tank_Menu_Settings_ShowGiantInfoPanel_State_Never"
+	{
+		"ko"			"안보기"
+	}
+	"Tank_Chat_ShowGiantInfo"
+	{
+		"#format"		"{1:c},{2:s},{3:N},{4:c},{5:s},{6:s},{7:c}"
+		"ko"			"{1} {2}{3}{4} 가 발진합니다: {5}{6}{7}"
+	}
+	"Tank_Menu_Giant_Main_Title"
+	{
+		"ko"			"해당 거대 로봇에 대해 더 알아보기:"
+	}
+	"Tank_Menu_Giant_Desc_WillBecome"
+	{
+		"#format"		"{1:N}"
+		"ko"			"{1}이(가) 발진합니다:"
+	}
+	"Tank_Dismiss"
+	{
+		"ko"			"닫기"
+	}
+	"Tank_GoBack"
+	{
+		"ko"			"뒤로 가기"
+	}
+	"Tank_Chat_Creators"
+	{
+		"#format"		"{1:s},{2:c},{3:s},{4:s},{5:c},{6:s},{7:c}"
+		"ko"			"{1}스탑 댓 탱크!{2} ({3}) 만든이 {4}Banshee{5} 와 {6}linux_lover{7}."
+	}
+	"Tank_Chat_Deploy_LostConnection"
+	{
+		"#format"		"{1:s},{2:N},{3:c}"
+		"ko"			"{1} {2}{3} 이(가) 서버와 연결이 끊겨서 폭탄이 되돌아 갔습니다."
+	}
+	"Tank_Chat_FailToLoad"
+	{
+		"#format"		"{1:c},{2:s},{3:c}"
+		"ko"			"{2}스탑 댓 탱크!{1}를 로드하는데 실패했습니다. {3}로그를 확인하세요. 라운드가 다시 시작합니다.."
+	}
+	"Tank_Annotation_Giant_SwatBuster"
+	{
+		"ko"			"Swat Busters away with your melee!"
+	}
+	"Tank_Annotation_HellHint"
+	{
+		"ko"			"해골 섬까지 싸워라!"
+	}
+	"Tank_GameText_Overtime"
+	{
+		"ko"			"탱크는 더 이상 뒤로 굴러가지 않습니다."
+	}
+	"Tank_Center_CantDeploy"
+	{
+		"ko"			"무적 상태에서는 폭탄을 배달할 수 없습니다!"
+	}
+	"Tank_Center_CantMegaHeal"
+	{
+		"ko"			"점령 지점에서는 폭탄 운반자한테 우버차지를 줄 수 없습니다!"
+	}
+	"Tank_Center_CantMegaHealCarrier"
+	{
+		"ko"			"점령 지점에서 폭탄 운반자는 우버차지를 받을 수 없습니다!"
+	}
+	"Tank_Center_CantPopUber"
+	{
+		"ko"			"점에서 폭탄 운반자는 우버차지를 사용 할 수 없습니다!"
+	}
+}
