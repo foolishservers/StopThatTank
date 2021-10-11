@@ -545,6 +545,15 @@ public Action Spawner_Timer_Spawn(Handle hTimer, int client)
 					AcceptEntityInput(bomb, "ForceDrop");
 				}
 			}
+			
+			//  Custom : Remove MVM Upgrade
+			SetEntProp(client, Prop_Send, "m_bInUpgradeZone", true);
+
+			KeyValues respec = new KeyValues("MVM_Respec");
+			FakeClientCommandKeyValues(client, respec);
+			delete respec;
+	
+			SetEntProp(client, Prop_Send, "m_bInUpgradeZone", false);
 
 			// Spawns a giant robot in the cached spawn position
 			float flPos[3];

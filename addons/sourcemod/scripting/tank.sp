@@ -9896,8 +9896,7 @@ void Bomb_Think(int iBomb)
 		
 		if(!Tank_GetAttributeValue(weapon, 57, value))
 		{
-			if(bIsGiantCarrying) Tank_SetAttributeValue(weapon, 57, 50.0);
-			else Tank_SetAttributeValue(weapon, 57, 17.0);
+			if(!bIsGiantCarrying) Tank_SetAttributeValue(weapon, 57, 20.0);
 		}
 	}
 	
@@ -9910,6 +9909,7 @@ void Bomb_Think(int iBomb)
 			if(GetVectorDistance(flPosPlayer, flTempPlayer) < (bIsGiantCarrying ? 390.0 : 190.0))
 			{
 				TF2_AddCondition(i, TFCond_DefenseBuffed, 0.2);
+				TF2_AddCondition(i, TFCond_RegenBuffed, 0.2);
 			}
 		}
 	}
