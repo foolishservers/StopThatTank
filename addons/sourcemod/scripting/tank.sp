@@ -9748,6 +9748,37 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] classname, int iItemDe
 	return Plugin_Continue;
 }
 
+public void TF2Items_OnGiveNamedItem_Post(int client, char[] classname, int itemDefinitionIndex, int itemLevel, int itemQuality, int entityIndex)
+{
+	if(!g_bEnabled) return;
+	
+	bool IsGiant = view_as<bool>(GetEntProp(client, Prop_Send, "m_bIsMiniBoss"));
+	
+	if(IsGiant) return;
+	
+	if(StrEqual(classname, "tf_weapon_minigun", false))
+	{
+		Tank_SetAttributeValue(entityIndex, 1, 0.7);
+	}
+	
+	if(StrEqual(classname, "tf_weapon_compound_bow", false))
+	{
+		Tank_SetAttributeValue(entityIndex, 1, 0.6);
+	}
+	
+	if(itemDefinitionIndex == 460)
+	{
+		Tank_SetAttributeValue(entityIndex, 1, 0.5);
+	}
+	
+	if(TF2_GetPlayerClass(client) != TFClass_Spy) return;
+	
+	if(StrEqual(classname, "tf_weapon_knife", false) || StrEqual(classname, "saxxy", false))
+	{
+		Tank_SetAttributeValue(entityIndex, 517, -65.0);
+	}
+}
+
 void TF2_RemoveItemInSlot(int client, int slot)
 {
 	// Make sure a weapon and its associated extra wearable/viewmodel is removed
@@ -9868,9 +9899,9 @@ void Bomb_Think(int iBomb)
 	}
 	
 	// custom: add buff banner to carrier and the carrier radius
-	TF2_AddCondition(client, TFCond_Buffed, 0.2);
-	TF2_AddCondition(client, TFCond_DefenseBuffed, 0.2);
-	if(!bIsGiantCarrying) TF2_AddCondition(client, TFCond_RegenBuffed, 0.2);
+	TF2_AddCondition(client, TFCond_DefenseBuffNoCritBlock, 0.2);
+	//TF2_AddCondition(client, TFCond_Buffed, 0.2);
+	//if(!bIsGiantCarrying) TF2_AddCondition(client, TFCond_RegenBuffed, 0.2);
 
 	float value;
 	for(int slot=0; slot<3; slot++)
@@ -9894,10 +9925,12 @@ void Bomb_Think(int iBomb)
 			Tank_SetAttributeValue(weapon, 405, 0.0);
 		}
 		
+		/*
 		if(!Tank_GetAttributeValue(weapon, 57, value))
 		{
-			if(!bIsGiantCarrying) Tank_SetAttributeValue(weapon, 57, 20.0);
+			if(!bIsGiantCarrying) Tank_SetAttributeValue(weapon, 57, 5.0);
 		}
+		*/
 	}
 	
 	float flTempPlayer[3];
@@ -9908,8 +9941,8 @@ void Bomb_Think(int iBomb)
 			GetEntPropVector(i, Prop_Send, "m_vecOrigin", flTempPlayer);
 			if(GetVectorDistance(flPosPlayer, flTempPlayer) < (bIsGiantCarrying ? 390.0 : 190.0))
 			{
-				TF2_AddCondition(i, TFCond_DefenseBuffed, 0.2);
-				TF2_AddCondition(i, TFCond_RegenBuffed, 0.2);
+				TF2_AddCondition(i, TFCond_DefenseBuffNoCritBlock, 0.2);
+				//TF2_AddCondition(i, TFCond_RegenBuffed, 0.2);
 			}
 		}
 	}
