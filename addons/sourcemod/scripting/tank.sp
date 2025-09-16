@@ -1009,28 +1009,7 @@ enum struct eTankRankStruct
 	int g_tankRankNumKills;
 	char g_tankRankName[TANKRANK_NAME_MAXLEN];
 }
-eTankRankStruct g_tankRank[] = {
-	{50, "Unremarkable"},
-	{150, "Scarcely Lethal"},
-	{250, "Mildly Menacing"},
-	{400, "Somewhat Threatening"},
-	{600, "Uncharitable"},
-	{800, "Notably Dangerous"},
-	{1024, "Sufficiently Lethal"},
-	{1300, "Truly Feared"},
-	{1650, "Spectacularly Lethal"},
-	{2048, "Gore-Spattered"},
-	{3000, "Wicked Nasty"},
-	{4500, "Positively Inhumane"},
-	{5999, "Totally Ordinary"},
-	{6000, "Face-Melting"},
-	{8850, "Rage-Inducing"},
-	{15000, "Server-Clearing"},
-	{30000, "Epic"},
-	{40000, "Legendary"},
-	{45000, "Australian"},
-	{50000, "Hale's Own"}
-};
+eTankRankStruct g_tankRank[20];
 
 bool g_hasSteamTools = false;
 bool g_hasSendProxy = false;
@@ -1053,6 +1032,9 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	Tank_PrintLicense();
+
+	g_tankRank[0].g_tankRankNumKills = 50;
+	g_tankRank[0].g_tankRankName = "Unremarkable";
 
 	CreateConVar("tank_version", PLUGIN_VERSION, "Stop that Tank! Version", FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
 
@@ -9398,7 +9380,7 @@ public void OnEntityCreated(int iEntity, const char[] classname)
 
 	if(!g_bEnabled) return;
 
-	if(strcmp(classname, "item_currencypack_custom") == 0)
+	/*if(strcmp(classname, "item_currencypack_custom") == 0)
 	{
 		if(g_nGameMode == GameMode_Race)
 		{
@@ -9410,13 +9392,13 @@ public void OnEntityCreated(int iEntity, const char[] classname)
 			
 			SDKHook(iEntity, SDKHook_SpawnPost, CritCash_OnSpawnPost);
 		}
-	}else if(g_iCreatingCartDispenser > 0 && strcmp(classname, "dispenser_touch_trigger") == 0)
+	}else*/if(g_iCreatingCartDispenser > 0 && strcmp(classname, "dispenser_touch_trigger") == 0)
 	{
 #if defined DEBUG
 		PrintToServer("(OnEntityCreated) %s (%d) (team %d) created by dispenser, saving reference!", classname, iEntity, g_iCreatingCartDispenser);
 #endif
 		g_iRefDispenserTouch[g_iCreatingCartDispenser] = EntIndexToEntRef(iEntity);
-	}else if(strncmp(classname, "item_healthkit_", 15) == 0 || strcmp(classname, "func_regenerate") == 0) // func_respawnroom
+	} else if(strncmp(classname, "item_healthkit_", 15) == 0 || strcmp(classname, "func_regenerate") == 0) // func_respawnroom
 	{
 		// Prevent the giant from activating these entities
 		SDKHook(iEntity, SDKHook_Touch, Giant_OnTouch);
@@ -9766,6 +9748,37 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] classname, int iItemDe
 	return Plugin_Continue;
 }
 
+public void TF2Items_OnGiveNamedItem_Post(int client, char[] classname, int itemDefinitionIndex, int itemLevel, int itemQuality, int entityIndex)
+{
+	if(!g_bEnabled) return;
+	
+	bool IsGiant = view_as<bool>(GetEntProp(client, Prop_Send, "m_bIsMiniBoss"));
+	
+	if(IsGiant) return;
+	
+	if(StrEqual(classname, "tf_weapon_minigun", false))
+	{
+		Tank_SetAttributeValue(entityIndex, 1, 0.7);
+	}
+	
+	if(StrEqual(classname, "tf_weapon_compound_bow", false))
+	{
+		Tank_SetAttributeValue(entityIndex, 1, 0.6);
+	}
+	
+	if(itemDefinitionIndex == 460)
+	{
+		Tank_SetAttributeValue(entityIndex, 1, 0.5);
+	}
+	
+	if(TF2_GetPlayerClass(client) != TFClass_Spy) return;
+	
+	if(StrEqual(classname, "tf_weapon_knife", false) || StrEqual(classname, "saxxy", false))
+	{
+		Tank_SetAttributeValue(entityIndex, 517, -65.0);
+	}
+}
+
 void TF2_RemoveItemInSlot(int client, int slot)
 {
 	// Make sure a weapon and its associated extra wearable/viewmodel is removed
@@ -9877,6 +9890,62 @@ void Bomb_Think(int iBomb)
 	float flPosPlayer[3];
 	GetEntPropVector(client, Prop_Send, "m_vecOrigin", flPosPlayer);
 	bool bIsGiantCarrying = view_as<bool>(GetEntProp(client, Prop_Send, "m_bIsMiniBoss"));
+
+	float flSpeedBonus;
+	if(!Tank_GetAttributeValue(client, ATTRIB_MOVE_SPEED_BONUS, flSpeedBonus))
+	{
+		Tank_SetAttributeValue(client, ATTRIB_MOVE_SPEED_BONUS, config.LookupFloat(g_hCvarBombMoveSpeed));
+		TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.001);
+	}
+	
+	// custom: add buff banner to carrier and the carrier radius
+	TF2_AddCondition(client, TFCond_DefenseBuffNoCritBlock, 0.2);
+	//TF2_AddCondition(client, TFCond_Buffed, 0.2);
+	//if(!bIsGiantCarrying) TF2_AddCondition(client, TFCond_RegenBuffed, 0.2);
+
+	float value;
+	for(int slot=0; slot<3; slot++)
+	{
+		int weapon = GetPlayerWeaponSlot(client, slot);
+		
+		if(weapon < MaxClients) continue;
+			
+		if(!Tank_GetAttributeValue(weapon, 252, value))
+		{
+			Tank_SetAttributeValue(weapon, 252, 0.0);
+		}
+		
+		if(!Tank_GetAttributeValue(weapon, 329, value))
+		{
+			Tank_SetAttributeValue(weapon, 329, 0.0);
+		}
+		
+		if(!Tank_GetAttributeValue(weapon, 405, value))
+		{
+			Tank_SetAttributeValue(weapon, 405, 0.0);
+		}
+		
+		/*
+		if(!Tank_GetAttributeValue(weapon, 57, value))
+		{
+			if(!bIsGiantCarrying) Tank_SetAttributeValue(weapon, 57, 5.0);
+		}
+		*/
+	}
+	
+	float flTempPlayer[3];
+	for(int i = 1; i <= MaxClients; i++)
+	{
+		if(i != client && IsValidEntity(i) && IsClientInGame(i) && IsPlayerAlive(i) && TF2_GetClientTeam(i) == TF2_GetClientTeam(client))
+		{
+			GetEntPropVector(i, Prop_Send, "m_vecOrigin", flTempPlayer);
+			if(GetVectorDistance(flPosPlayer, flTempPlayer) < (bIsGiantCarrying ? 390.0 : 190.0))
+			{
+				TF2_AddCondition(i, TFCond_DefenseBuffNoCritBlock, 0.2);
+				//TF2_AddCondition(i, TFCond_RegenBuffed, 0.2);
+			}
+		}
+	}
 
 	// Get the distance of the player to the next control point.
 	float goalPos[3];
@@ -10607,7 +10676,35 @@ void Bomb_ClearMoveBonus()
 					if(weapon > MaxClients) Tank_ClearCache(weapon);
 				}
 			}
-
+			
+			float value2;
+	
+			for(int slot=0; slot<3; slot++)
+			{
+				int weapon = GetPlayerWeaponSlot(i, slot);
+				if(weapon < MaxClients) continue;
+				
+				if(Tank_GetAttributeValue(weapon, 252, value2))
+				{
+					Tank_RemoveAttribute(weapon, 252);
+				}
+		
+				if(Tank_GetAttributeValue(weapon, 329, value2))
+				{
+					Tank_RemoveAttribute(weapon, 329);
+				}
+		
+				if(Tank_GetAttributeValue(weapon, 405, value2))
+				{
+					Tank_RemoveAttribute(weapon, 405);
+				}
+				
+				if(Tank_GetAttributeValue(weapon, 57, value2))
+				{
+					Tank_RemoveAttribute(weapon, 57);
+				}
+			}
+			
 			// Remove the MvM defense buff on the player
 			TF2_RemoveCondition(i, TFCond_DefenseBuffNoCritBlock);
 		}
@@ -10939,13 +11036,18 @@ public void Bomb_OnRobotPickup(const char[] output, int caller, int activator, f
 			// Nerf: Robot carriers move slower
 			Tank_SetAttributeValue(client, ATTRIB_MOVE_SPEED_BONUS, config.LookupFloat(g_hCvarBombMoveSpeed));
 			TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.001);
+			
 			// Nerf: Robot carriers cannot rocket/sticky jump
 			Tank_SetAttributeValue(client, ATTRIB_SELF_DMG_PUSH_FORCE_DECREASE, 0.1);
+			
 			// Because we are applying this attribute on the player entity, we need to refresh the attributes on any weapons that might be hooking this attribute.
 			for(int i=0; i<3; i++)
 			{
 				int weapon = GetPlayerWeaponSlot(client, i);
-				if(weapon > MaxClients) Tank_ClearCache(weapon);
+				if(weapon > MaxClients) 
+				{
+					Tank_ClearCache(weapon);
+				}
 			}
 		}
 
@@ -11011,7 +11113,7 @@ void ApplyBombCarrierEffects(int client)
 		case 1: // minicrits
 		{
 			if(TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_RemoveCondition(client, TFCond_CritOnFlagCapture);
-			if(TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_RemoveCondition(client, TFCond_DefenseBuffNoCritBlock);
+			//if(TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_RemoveCondition(client, TFCond_DefenseBuffNoCritBlock);
 			
 			if(!TF2_IsPlayerInCondition(client, TFCond_Buffed)) TF2_AddCondition(client, TFCond_Buffed, -1.0, client);
 		}
@@ -11020,7 +11122,7 @@ void ApplyBombCarrierEffects(int client)
 			if(TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_RemoveCondition(client, TFCond_CritOnFlagCapture);
 			
 			if(!TF2_IsPlayerInCondition(client, TFCond_Buffed)) TF2_AddCondition(client, TFCond_Buffed, -1.0, client);
-			if(!TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_AddCondition(client, TFCond_DefenseBuffNoCritBlock, -1.0);	// This is the defense buff that MvM uses, resistance to crits.
+			//if(!TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_AddCondition(client, TFCond_DefenseBuffNoCritBlock, -1.0);	// This is the defense buff that MvM uses, resistance to crits.
 		}
 		case 3: // crits, defense buffs
 		{
@@ -11032,12 +11134,12 @@ void ApplyBombCarrierEffects(int client)
 			}
 
 			if(!TF2_IsPlayerInCondition(client, TFCond_Buffed)) TF2_AddCondition(client, TFCond_Buffed, -1.0, client); // For players that use the Cow Mangler.
-			if(!TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_AddCondition(client, TFCond_DefenseBuffNoCritBlock, -1.0);	// This is the defense buff that MvM uses, resistance to crits.
+			//if(!TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_AddCondition(client, TFCond_DefenseBuffNoCritBlock, -1.0);	// This is the defense buff that MvM uses, resistance to crits.
 		}
 		default:
 		{
 			if(TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_RemoveCondition(client, TFCond_CritOnFlagCapture);
-			if(TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_RemoveCondition(client, TFCond_DefenseBuffNoCritBlock);
+			//if(TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_RemoveCondition(client, TFCond_DefenseBuffNoCritBlock);
 			if(TF2_IsPlayerInCondition(client, TFCond_Buffed) && g_lastBombTier != tier)
 			{
 				TF2_RemoveCondition(client, TFCond_Buffed);
