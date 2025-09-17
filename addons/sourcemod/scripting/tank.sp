@@ -186,6 +186,7 @@
 #define	EF_PARENT_ANIMATES		0x200	// always assume that the parent entity is animating
 #define	EF_MAX_BITS = 10
 
+/*
 #define FL_EDICT_CHANGED	(1<<0)	// Game DLL sets this when the entity state changes
 									// Mutually exclusive with FL_EDICT_PARTIAL_CHANGE.
 									
@@ -196,6 +197,7 @@
 #define FL_EDICT_ALWAYS		(1<<3)	// always transmit this entity
 #define FL_EDICT_DONTSEND	(1<<4)	// don't transmit this entity
 #define FL_EDICT_PVSCHECK	(1<<5)	// always transmit entity, but cull against PVS
+*/
 
 // m_nSolidType
 #define SOLID_NONE 0 // no solid model
@@ -6609,10 +6611,10 @@ void SDK_DoQuickBuild(int iBaseObject)
 
 stock int TF2_GetEquippedItemInSlot(int client, int iSlot)
 {
-	new iWeapon = GetPlayerWeaponSlot(client, iSlot);
+	int iWeapon = GetPlayerWeaponSlot(client, iSlot);
 	if(iWeapon > MaxClients) return iWeapon;
 	
-	new iWearable = SDK_GetEquippedWearable(client, iSlot);
+	int iWearable = SDK_GetEquippedWearable(client, iSlot);
 	if(iWearable > MaxClients) return iWearable;
 	
 	return -1;
@@ -7602,6 +7604,7 @@ float Path_GetDistance(int iPathStart, int iPathEnd)
 	return flDistance;
 }
 
+/*
 stock float Train_DistanceToGoal()
 {
 	// Gets the distance in a straight line from the cart to the goal
@@ -7619,6 +7622,7 @@ stock float Train_DistanceToGoal()
 	
 	return 9999.0;
 }
+*/
 
 float Train_RealDistanceToGoal(int team)
 {
@@ -8468,6 +8472,8 @@ public Action Timer_TankTeleportFinale(Handle hTimer, int team)
 	{
 		TeleportEntity(iTank, g_flTankTempPos[team], g_flTankTempAng[team], NULL_VECTOR);
 	}
+
+	return Plugin_Continue;
 }
 
 public Action CritCash_OnTouch(int entity, int client)
@@ -9682,7 +9688,7 @@ public void NextFrame_Building(int iRef)
 }
 
 #if defined _SENDPROXYMANAGER_INC_
-public Action SendProxy_BuildingNotSapped(int entity, char[] propName, int &value, int element)
+public Action SendProxy_BuildingNotSapped(int entity, const char[] propName, int &value, int element, int client)
 {
 	int builder = GetEntPropEnt(entity, Prop_Send, "m_hBuilder");
 	if(builder >= 1 && builder <= MaxClients && g_nSpawner[builder].g_bSpawnerEnabled && g_nSpawner[builder].g_nSpawnerType == Spawn_GiantRobot && IsClientInGame(builder))
@@ -11405,7 +11411,7 @@ public Action Command_Updates(int client, int args)
 	return Plugin_Handled;
 }
 
-public int PanelHandler(Handle hPanel, MenuAction action, int client, int menu_item)
+public void PanelHandler(Handle hPanel, MenuAction action, int client, int menu_item)
 {
 	return;
 }
@@ -13438,9 +13444,11 @@ int CaptureTriggers_Create(int team, int index)
 		SetEntProp(iObjective, Prop_Send, "m_iUpdateCapHudParity", iHudParity);
 
 		// Control point sounds are disabled on most payload maps
+		/*
 		int iFlags = GetEntProp(iControlPoint, Prop_Data, "m_spawnflags");
 		iFlags &= ~SF_DISABLE_SOUNDS;
-		//SetEntProp(iControlPoint, Prop_Data, "m_spawnflags", iFlags);
+		SetEntProp(iControlPoint, Prop_Data, "m_spawnflags", iFlags);
+		*/
 		SetEntProp(iControlPoint, Prop_Data, "m_iWarnOnCap", 0); // Susposed to enable announcer warning lines but doesn't seem to have an effect
 
 		SDKHook(iTrigger, SDKHook_StartTouch, CaptureTriggers_StartTouch);
@@ -14138,7 +14146,7 @@ void Settings_MainMenu(int client)
 	DisplayMenu(menu, client, MENU_TIME_FOREVER);
 }
 
-public int MenuHandler_SettingsMain(Menu menu, MenuAction action, int client, int menu_item)
+public void MenuHandler_SettingsMain(Menu menu, MenuAction action, int client, int menu_item)
 {
 	if(action == MenuAction_Select)
 	{
@@ -14710,7 +14718,7 @@ void UTIL_ScreenShake(float center[3], float amplitude, float frequency, float d
 	{
 		if(IsClientInGame(i) && !IsFakeClient(i))
 		{
-			if(!airShake && command == Shake_Start && !(GetEntityFlags(i) && FL_ONGROUND)) continue;
+			if(!airShake && command == Shake_Start && !(GetEntityFlags(i) & FL_ONGROUND)) continue;
 
 			float playerPos[3];
 			GetClientAbsOrigin(i, playerPos);

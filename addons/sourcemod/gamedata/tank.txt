@@ -313,43 +313,43 @@
 			}
 			"CBaseEntity::ShouldTransmit"
 			{
-				"linux"		"19"
-				"windows"	"18"
+				"linux"		"21"
+				"windows"	"20"
 			}
 			"CBaseEntity::PhysicsSolidMaskForEntity"
 			{
-				"linux"		"168"
-				"windows"	"167"
+				"linux"		"175"
+				"windows"	"174"
 			}
 			"CCaptureFlag::PickUp"
 			{
-				"linux"		"263"
-				"windows"	"225"
+				"linux"		"270"
+				"windows"	"232"
 			}
 			"CBasePlayer::EquipWearable"
 			{
-				"linux"		"432"
-				"windows"	"431"
+				"linux"		"440"
+				"windows"	"439"
 			}
 			"CBasePlayer::RemoveWearable"
 			{
-				"linux"		"433"
-				"windows"	"432"
+				"linux"		"441"
+				"windows"	"440"
 			}
 			"CObjectTeleporter::TeleporterReceive"
 			{
-				"linux"		"412"
-				"windows"	"398"
+				"linux"		"419"
+				"windows"	"405"
 			}
 			"CTFWeaponBase::SendWeaponAnim"
 			{
-				"linux"		"249"
-				"windows"	"243"
+				"linux"		"256"
+				"windows"	"250"
 			}
 			"CTFWeaponBase::GetMaxClip1"
 			{
-				"linux"		"324"
-				"windows"	"318"
+				"linux"		"331"
+				"windows"	"325"
 			}
 			"CAttributeManager::OnAttributeValuesChanged"
 			{
@@ -358,8 +358,8 @@
 			}
 			"CMonsterResource::SetBossHealthPercentage"
 			{
-				"linux"		"194"
-				"windows"	"193"
+				"linux"		"201"
+				"windows"	"200"
 			}
 		}
 	}

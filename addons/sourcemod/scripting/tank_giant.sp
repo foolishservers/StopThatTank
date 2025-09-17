@@ -459,6 +459,7 @@ void Giant_LoadTemplates()
 	CloseHandle(hKv);
 }
 
+/*
 stock void Giant_PrintDebugTemplate(int iIndex)
 {
 	if(iIndex < 0 || iIndex >= MAX_NUM_TEMPLATES) return;
@@ -509,6 +510,7 @@ stock void Giant_PrintDebugTemplate(int iIndex)
 	}
 	PrintToServer("==============================================================");
 }
+*/
 
 /*
 void Giant_UpdateHitbox(int client)
@@ -1712,7 +1714,7 @@ void Giant_ShowMain(int client, bool bForceMain=false)
 	DisplayMenu(hMenu, client, MENU_TIME_FOREVER);
 }
 
-public int MenuHandler_Main(Handle hMenu, MenuAction action, int client, int menu_item)
+public void MenuHandler_Main(Handle hMenu, MenuAction action, int client, int menu_item)
 {
 	if(action == MenuAction_Select)
 	{
@@ -1759,7 +1761,7 @@ void Giant_ShowDesc(int client, int iIndex, bool bShowBackButton=true, int iGian
 	CloseHandle(hPanel);
 }
 
-public int PanelHandler_Desc(Handle hPanel, MenuAction action, int client, int menu_item)
+public void PanelHandler_Desc(Handle hPanel, MenuAction action, int client, int menu_item)
 {
 	if(action == MenuAction_Select)
 	{
@@ -2044,7 +2046,7 @@ void Giant_FlagWeaponDontDrop(int weapon)
 }
 
 #if defined _SENDPROXYMANAGER_INC_
-public Action SendProxy_ToggleGiantHealthMeter(int entity, char[] propName, int &value, int element)
+public Action SendProxy_ToggleGiantHealthMeter(int entity, const char[] propName, int &value, int element, int client)
 {
 	// Remove the giant health meter only when the spy is disguised.
 	if(TF2_IsPlayerInCondition(entity, TFCond_Disguised))
