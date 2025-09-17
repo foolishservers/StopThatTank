@@ -118,7 +118,7 @@ methodmap CustomProps < ArrayList
 			}
 		}
 
-		this.Clear();
+		view_as<ArrayList>(this).Clear();
 	}
 };
 CustomProps g_customProps = null;
