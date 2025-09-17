@@ -1,0 +1,39 @@
+"VertexLitGeneric"
+{
+	"$basetexture"			"vgui\replay\thumbnails\models\bots\shared\robo_eye_zombie"
+
+	"$yellow"				"0"
+	"$one"					"1"
+
+	"$phong"				"1"
+	"$phongexponent"		"50"
+	"$phongboost"			"4"	
+	"$lightwarptexture" 	"models/lightwarps/robot_lightwarp"
+	"$phongfresnelranges"	"[.5 .7 1]"
+	"$halflambert"			"1"
+	
+	"$envmap"				"cubemaps/cubemap_sheen001"
+	"$envmaptint"			"[.1 .1 .1]"
+	
+	"$rimlight" 			"1"						
+	"$rimlightexponent" 	"1"				
+	"$rimlightboost"		"2"
+
+	"$cloakPassEnabled" "1"
+
+	"Proxies"
+	{
+		"spy_invis"
+		{
+		}
+		"YellowLevel"
+		{
+			"resultVar" 			"$yellow"
+		}
+		"Equals"
+		{
+			"srcVar1"  			"$yellow"
+			"resultVar" 		"$color2"
+		}
+	}
+}

@@ -542,8 +542,11 @@ float g_flPathTotalDistance[MAX_TEAMS];
 
 char g_strSoundCountdown[][] = {"vo/announcer_begins_1sec.mp3", "vo/announcer_begins_2sec.mp3", "vo/announcer_begins_3sec.mp3", "vo/announcer_begins_4sec.mp3", "vo/announcer_begins_5sec.mp3"};
 
-char g_strModelRobots[][] = {"", "models/bots/scout/bot_scout.mdl", "models/bots/sniper/bot_sniper.mdl", "models/bots/soldier/bot_soldier.mdl", "models/bots/demo/bot_demo.mdl", "models/bots/medic/bot_medic.mdl", "models/bots/heavy/bot_heavy.mdl", "models/bots/pyro/bot_pyro.mdl", "models/bots/spy/bot_spy.mdl", "models/bots/engineer/bot_engineer.mdl"};
+char g_strModelRobots[][] = {"", "models/robot_fix_1/player/scout", "models/robot_fix_1/player/sniper", "models/robot_fix_1/player/soldier", "models/robot_fix_1/player/demo", "models/robot_fix_1/player/medic", "models/robot_fix_1/player/heavy", "models/robot_fix_1/player/pyro", "models/robot_fix_1/player/spy", "models/robot_fix_1/player/engineer"};
+char g_strModelRobotsMdl[][] = {"", "models/robot_fix_1/player/scout.mdl", "models/robot_fix_1/player/sniper.mdl", "models/robot_fix_1/player/soldier.mdl", "models/robot_fix_1/player/demo.mdl", "models/robot_fix_1/player/medic.mdl", "models/robot_fix_1/player/heavy.mdl", "models/robot_fix_1/player/pyro.mdl", "models/robot_fix_1/player/spy.mdl", "models/robot_fix_1/player/engineer.mdl"};
 int g_iModelIndexRobots[sizeof(g_strModelRobots)];
+char g_strModelBossRobots[][] = {"models/robot_fix_1/bots/scout_boss/bot_scout_boss", "models/robot_fix_1/bots/soldier_boss/bot_soldier_boss", "models/robot_fix_1/bots/demo_boss/bot_demo_boss", "models/robot_fix_1/bots/heavy_boss/bot_heavy_boss","models/robot_fix_1/bots/pyro_boss/bot_pyro_boss"};
+char g_strModelRobotCosmetic[][] = {"models/robot_fix_1/bots/gameplay_cosmetic/light_demo_off", "models/robot_fix_1/bots/gameplay_cosmetic/light_demo_on", "models/robot_fix_1/bots/gameplay_cosmetic/light_engineer_off", "models/robot_fix_1/bots/gameplay_cosmetic/light_engineer_on", "models/robot_fix_1/bots/gameplay_cosmetic/light_heavy_off", "models/robot_fix_1/bots/gameplay_cosmetic/light_heavy_on", "models/robot_fix_1/bots/gameplay_cosmetic/light_medic_off", "models/robot_fix_1/bots/gameplay_cosmetic/light_medic_on", "models/robot_fix_1/bots/gameplay_cosmetic/light_pyro_off", "models/robot_fix_1/bots/gameplay_cosmetic/light_pyro_on", "models/robot_fix_1/bots/gameplay_cosmetic/light_scout_off", "models/robot_fix_1/bots/gameplay_cosmetic/light_scout_on", "models/robot_fix_1/bots/gameplay_cosmetic/light_sniper_off", "models/robot_fix_1/bots/gameplay_cosmetic/light_sniper_on", "models/robot_fix_1/bots/gameplay_cosmetic/light_soldier_off", "models/robot_fix_1/bots/gameplay_cosmetic/light_soldier_on", "models/robot_fix_1/bots/gameplay_cosmetic/light_spy_off", "models/robot_fix_1/bots/gameplay_cosmetic/light_spy_on"};
 char g_strModelHumans[][] =  {"", "models/player/scout.mdl", "models/player/sniper.mdl", "models/player/soldier.mdl", "models/player/demo.mdl", "models/player/medic.mdl", "models/player/heavy.mdl", "models/player/pyro.mdl", "models/player/spy.mdl", "models/player/engineer.mdl"};
 int g_iModelIndexHumans[sizeof(g_strModelHumans)];
 
@@ -1701,9 +1704,340 @@ public void OnMapStart()
 		if(g_strSoundNo[i][0] != '\0') PrecacheSound(g_strSoundNo[i]);
 	}
 
-	// Precache robot models
-	for(int i=0; i<sizeof(g_strModelRobots); i++) g_iModelIndexRobots[i] = Tank_PrecacheModel(g_strModelRobots[i]);
-	
+	// Precache and download robot fix models
+	static const char mdlExts[][] = {"dx80.vtx", "dx90.vtx", "mdl", "phy", "vvd"};
+	char buffer[PLATFORM_MAX_PATH];
+	for(int i=0; i<sizeof(g_strModelRobots); i++)
+	{
+		for(int a; a < sizeof(mdlExts); a++)
+		{
+			FormatEx(buffer, sizeof(buffer), "%s.%s", g_strModelRobots[i], mdlExts[a]);
+			if(!FileExists(buffer, true)) continue;
+			
+			AddFileToDownloadsTable(buffer);
+			
+			if (a == 2) g_iModelIndexRobots[i] = Tank_PrecacheModel(buffer);
+		}
+	}
+
+	// Download boss robot fix models
+	for(int i=0; i<sizeof(g_strModelBossRobots); i++)
+	{
+		for(int a; a < sizeof(mdlExts); a++)
+		{
+			FormatEx(buffer, sizeof(buffer), "%s.%s", g_strModelBossRobots[i], mdlExts[a]);
+			if(!FileExists(buffer, true)) continue;
+			
+			AddFileToDownloadsTable(buffer);
+		}
+	}
+
+	// Precache and download robot cosmetic fix models
+	for(int i=0; i<sizeof(g_strModelRobotCosmetic); i++)
+	{
+		for(int a; a < sizeof(mdlExts); a++)
+		{
+			FormatEx(buffer, sizeof(buffer), "%s.%s", g_strModelRobotCosmetic[i], mdlExts[a]);
+			if(!FileExists(buffer, true)) continue;
+			
+			AddFileToDownloadsTable(buffer);
+			
+			if (a == 2) Tank_PrecacheModel(buffer);
+		}
+	}
+
+	// Download robot fix models's materials
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_blue.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_blue.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_blue_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_blue_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_blue_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_blue_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_exp.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_head_blue.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_head_blue.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_head_blue_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_head_blue_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_head_blue_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_head_blue_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_head_exp.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_head_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_head_red.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_head_red.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_head_red_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_head_red_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_head_red_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_head_red_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_head_zombie_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_red.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_red.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_red_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_red_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_red_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_red_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_bot_zombie_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_buster.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_buster.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_buster_blue_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_buster_blue_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_buster_blue_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_buster_exp.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_buster_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_buster_red.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_buster_red.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_buster_red_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_buster_red_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_buster_red_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_buster_red_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/demo/demo_buster_zombie_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_blue.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_blue.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_blue_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_blue_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_blue_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_blue_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_exp.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_eyes_blue.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_eyes_red.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_eyes_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_head_blue.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_head_blue.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_head_blue_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_head_blue_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_head_blue_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_head_blue_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_head_exp.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_head_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_head_red.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_head_red.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_head_red_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_head_red_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_head_red_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_head_red_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_head_zombie_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_red.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_red.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_red_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_red_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_red_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_red_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/engineer/engineer_bot_zombie_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_blue.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_blue.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_blue_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_blue_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_blue_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_blue_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_exp.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_head.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_head.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_head_blue_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_head_blue_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_head_blue_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_head_exp.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_head_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_head_red_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_head_red_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_head_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_head_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_head_zombie_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_red.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_red.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_red_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_red_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_red_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_red_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/heavy/heavy_bot_zombie_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_blue.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_blue.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_blue_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_blue_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_blue_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_blue_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_exp.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_head.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_head.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_head_blue_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_head_blue_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_head_exp.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_head_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_head_red_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_head_red_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_head_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_head_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_head_zombie_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_red.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_red.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_red_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_red_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_red_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_red_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/medic/bot_medic_zombie_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_blue.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_blue.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_blue_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_blue_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_blue_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_blue_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_exp.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_head.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_head.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_head_blue_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_head_blue_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_head_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_head_normal_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_head_red_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_head_red_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_head_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_head_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_normal_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_red.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_red.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_red_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_red_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_red_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/pyro/pyro_bot_red_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_blue.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_blue.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_blue_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_blue_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_blue_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_blue_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_exp.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_head_blue.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_head_blue.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_head_blue_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_head_blue_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_head_blue_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_head_blue_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_head_exp.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_head_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_head_normal_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_head_red.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_head_red.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_head_red_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_head_red_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_head_red_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_head_red_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_normal_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_red.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_red.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_red_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_red_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_red_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/scout/bot_scout_red_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/shared/detail_blue_invun.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/shared/detail_red_invun.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/shared/robo_eye_blue.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/shared/robo_eye_blue.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/shared/robo_eye_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/shared/robo_eye_invun.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/shared/robo_eye_red.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/shared/robo_eye_red.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/shared/robo_eye_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/shared/robo_eye_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_blue.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_blue.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_blue_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_blue_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_blue_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_blue_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_exp.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_head_blue.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_head_blue.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_head_blue_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_head_blue_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_head_blue_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_head_blue_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_head_exp.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_head_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_head_normal_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_head_red.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_head_red.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_head_red_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_head_red_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_head_red_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_head_red_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_normal_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_red.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_red.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_red_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_red_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_red_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/sniper/sniper_bot_red_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_medals.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_medals.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_medals_blue.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_medals_blue.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_blue.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_blue.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_blue_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_blue_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_blue_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_blue_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_exp.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_head_blue_invun_reuv.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_head_blue_invun_zombie_reuv.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_head_blue_reuv.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_head_blue_reuv.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_head_blue_zombie_reuv.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_head_blue_zombie_reuv.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_head_emission_reuv.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_head_exp_reuv.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_head_normal_reuv.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_head_normal_zombie_reuv.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_head_red_invun_reuv.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_head_red_invun_zombie_reuv.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_head_red_reuv.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_head_red_reuv.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_head_red_zombie_reuv.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_head_red_zombie_reuv.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_normal_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_red.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_red.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_red_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_red_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_red_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/soldier/bot_soldier_red_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_body_blue.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_body_blue.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_body_blue_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_body_blue_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_body_blue_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_body_blue_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_body_exp.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_body_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_body_normal_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_body_red.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_body_red.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_body_red_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_body_red_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_body_red_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_body_red_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_head_blue.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_head_blue.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_head_blue_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_head_blue_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_head_blue_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_head_blue_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_head_exp.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_head_normal.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_head_normal_zombie.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_head_red.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_head_red.vtf");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_head_red_invun.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_head_red_invun_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_head_red_zombie.vmt");
+	AddFileToDownloadsTable("materials/vgui/replay/thumbnails/models/bots/spy/spy_bot_head_red_zombie.vtf");
+
 	// Precache human player model indices
 	for(int i=0; i<sizeof(g_strModelHumans); i++) g_iModelIndexHumans[i] = Tank_PrecacheModel(g_strModelHumans[i]);
 
@@ -8154,7 +8488,7 @@ void Robot_Toggle(int client, bool bEnable)
 	if(bEnable)
 	{
 		// Make the player into a robot
-		SetVariantString(g_strModelRobots[TF2_GetPlayerClass(client)]);
+		SetVariantString(g_strModelRobotsMdl[TF2_GetPlayerClass(client)]);
 		
 		AcceptEntityInput(client, "SetCustomModel");
 		SetEntProp(client, Prop_Send, "m_bUseClassAnimations", 1);
