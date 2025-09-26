@@ -1212,6 +1212,7 @@ int Giant_PickTemplate()
 	return iRandomTemplate;
 }
 
+/*
 int Giant_PickPlayer(int team)
 {
 	int iResource = GetPlayerResourceEntity();
@@ -1273,26 +1274,28 @@ int Giant_PickPlayer(int team)
 
 	return 0;
 }
+*/
 
-/*
-Giant_PickPlayer(team)
+#define PICK_GIANT_RATIO 0.35
+int Giant_PickPlayer(team)
 {
-	new iResource = GetPlayerResourceEntity();
+	int iResource = GetPlayerResourceEntity();
 	if(iResource <= MaxClients) return 0;
 	
 	// Pick a random player from the top x players on a team
 	Handle hArrayTopPlayers = CreateArray();
 
 	// Determine how many players with the top score we want to add
-	new iNumPlayers = CountPlayersOnTeam(team);
-	new iMaxToPick = RoundToCeil(float(iNumPlayers) * config.LookupFloat(g_hCvarBombTop));
+	int iNumPlayers = CountPlayersOnTeam(team);
+	int iMaxToPick = RoundToCeil(float(iNumPlayers) * PICK_GIANT_RATIO/*config.LookupFloat(g_hCvarBombTop)*/);
 	for(int iMax=0; iMax<iMaxToPick; iMax++)
 	{
-		new iMaxIndex = 0;
-		new iMaxPoints = -1;
+		int iMaxIndex = 0;
+		int iMaxPoints = -1;
 		for(int i=1; i<=MaxClients; i++)
 		{
-			if(IsClientInGame(i) && GetClientTeam(i) == team && g_giantTracker.canPlayGiant(i) && !g_bBusterPassed[i] && !(g_nSpawner[i].g_bSpawnerEnabled && g_nSpawner[i].g_nSpawnerType == Spawn_GiantRobot && g_nSpawner[i].g_iSpawnerGiantIndex != GiantRobot_SentryBuster))
+			//if(IsClientInGame(i) && GetClientTeam(i) == team && g_giantTracker.canPlayGiant(i) && !g_bBusterPassed[i] && !(g_nSpawner[i].g_bSpawnerEnabled && g_nSpawner[i].g_nSpawnerType == Spawn_GiantRobot && g_nSpawner[i].g_iSpawnerGiantIndex != GiantRobot_SentryBuster))
+			if(IsClientInGame(i) && GetClientTeam(i) == team && !g_bBusterPassed[i] && !(g_nSpawner[i].g_bSpawnerEnabled && g_nSpawner[i].g_nSpawnerType == Spawn_GiantRobot && !(g_nGiants[g_nSpawner[i].g_iSpawnerGiantIndex].g_iGiantTags & GIANTTAG_SENTRYBUSTER)))
 			{
 				bool bAlreadyPicked = false;
 				// Make sure we haven't picked this person before
@@ -1306,7 +1309,7 @@ Giant_PickPlayer(team)
 				}
 				if(bAlreadyPicked) continue;
 				
-				new iScore = GetEntProp(iResource, Prop_Send, "m_iTotalScore", 4, i);
+				int iScore = GetEntProp(iResource, Prop_Send, "m_iTotalScore", 4, i);
 				if(iScore > iMaxPoints)
 				{
 					iMaxIndex = i;
@@ -1330,7 +1333,7 @@ Giant_PickPlayer(team)
 		// So pick a random person on the BLU team. If this fails.. there is probably no one on BLU.
 		for(int i=1; i<=MaxClients; i++)
 		{
-			if(IsClientInGame(i) && GetClientTeam(i) == team && !g_bBusterPassed[i] && !(g_nSpawner[i].g_bSpawnerEnabled && g_nSpawner[i].g_nSpawnerType == Spawn_GiantRobot && g_nSpawner[i].g_iSpawnerGiantIndex != GiantRobot_SentryBuster))
+			if(IsClientInGame(i) && GetClientTeam(i) == team && !g_bBusterPassed[i] && !(g_nSpawner[i].g_bSpawnerEnabled && g_nSpawner[i].g_nSpawnerType == Spawn_GiantRobot && !(g_nGiants[g_nSpawner[i].g_iSpawnerGiantIndex].g_iGiantTags & GIANTTAG_SENTRYBUSTER)))
 			{
 				PushArrayCell(hArrayTopPlayers, i);
 			}
@@ -1343,12 +1346,11 @@ Giant_PickPlayer(team)
 		}
 	}
 	
-	new iRandomPlayer = GetArrayCell(hArrayTopPlayers, GetRandomInt(0, GetArraySize(hArrayTopPlayers)-1));
+	int iRandomPlayer = GetArrayCell(hArrayTopPlayers, GetRandomInt(0, GetArraySize(hArrayTopPlayers)-1));
 	CloseHandle(hArrayTopPlayers);
 
 	return iRandomPlayer;
 }
-*/
 
 void Giant_StripWearables(int client)
 {
