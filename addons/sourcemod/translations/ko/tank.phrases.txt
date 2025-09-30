@@ -241,7 +241,7 @@
 	}
 	"Tank_Annotation_Buster_Hint"
 	{
-		"ko"			"자폭하려면 공격하거나 도발 하세요!"
+		"ko"			"자폭하려면 엔지니어 또는 센트리건에 가까이 가세요!"
 	}
 	"Tank_Annotation_Giant_Spawned"
 	{

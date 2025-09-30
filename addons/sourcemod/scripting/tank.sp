@@ -343,6 +343,7 @@ Handle g_hCvarBombReturnTime;
 Handle g_hCvarBombRoundTime;
 Handle g_hCvarBombDistanceWarn;
 Handle g_hCvarBombTimeDeploy;
+Handle g_hCvarGiantBombTimeDeploy;
 Handle g_hCvarGiantAmmoMultiplier;
 Handle g_hCvarRespawnBase;
 Handle g_hCvarRespawnGiant;
@@ -1140,6 +1141,7 @@ public void OnPluginStart()
 	g_hCvarBombDroppedMaxTime = CreateConVar("tank_bomb_dropped_maxtime", "-1.0", "Maximum round time (in minutes) when the bomb is dropped in payload. (Set to -1.0 to disable.)");
 	g_hCvarBombDistanceWarn = CreateConVar("tank_bomb_distance_warn", "650.0", "Distance the bomb must be from the goal for warnings to sound.");
 	g_hCvarBombTimeDeploy = CreateConVar("tank_bomb_time_deploy", "1.9", "Seconds that it takes for a robot to deploy a bomb.");
+	g_hCvarGiantBombTimeDeploy = CreateConVar("tank_giant_bomb_time_deploy", "3.0", "Seconds that it takes for a giant robot to deploy a bomb.");
 	g_hCvarBombMoveSpeed = CreateConVar("tank_bomb_move_speed", "1.0", "Move speed bonus for normal bomb carriers. (percentage)");
 	g_hCvarBombCapAreaSize = CreateConVar("tank_bomb_capture_size", "-175.0 -175.0 -50.0 175.0 175.0 125.0", "Define the bomb capture area size. First 3 numbers are the x,y,z mins. Last 3 numbers are the x,y,z maxs. Delimited by space.");
 	g_hCvarBombCaptureRate = CreateConVar("tank_bomb_capture_rate", "2.9", "Capture rate for robots to capture a control point with the bomb.");
@@ -1438,6 +1440,7 @@ public void OnPluginStart()
 public void OnAllPluginsLoaded()
 {
 	SDK_Init();
+	Dhook_Init();
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -2147,6 +2150,8 @@ public void OnPluginEnd()
 
 	// Unload the memory patches.
 	Mod_Toggle(false);
+
+	DisableDynamicDetour();
 }
 
 public void OnConfigsExecuted()
@@ -2320,9 +2325,28 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 					// Make attack cause the player to taunt and self-destruct
 					// Prevent the bomb becoming armed as soon as they spawn
-					if(g_nSpawner[client].g_flSpawnerTimeSpawned != 0.0 && GetEngineTime() - g_nSpawner[client].g_flSpawnerTimeSpawned > 2.5 && buttons & IN_ATTACK)
+					if(g_nSpawner[client].g_flSpawnerTimeSpawned != 0.0 && GetEngineTime() - g_nSpawner[client].g_flSpawnerTimeSpawned > 2.5/* && buttons & IN_ATTACK*/)
 					{
-						FakeClientCommand(client, "taunt");
+						float pos[3];
+						GetClientAbsOrigin(client, pos);
+						pos[2] += 110.0;
+
+						int entity = MaxClients+1;
+						while((entity = FindEntityByClassname(entity, "obj_sentrygun")) > MaxClients)
+						{
+							if(Buster_CanBeDestroyed(entity, team, pos, 200.0)) 
+							{
+								FakeClientCommand(client, "taunt");
+							}
+						}
+						
+						for(int i=1; i<=MaxClients; i++)
+						{
+							if(i != client && !g_hitBySentryBuster[i] && IsClientInGame(i) && IsPlayerAlive(i) && TF2_GetPlayerClass(i) == TFClass_Engineer && Buster_CanBeDestroyed(i, team, pos, 200.0))
+							{
+								FakeClientCommand(client, "taunt");
+							}
+						}
 					}
 
 					// Detect a successful taunt
@@ -7628,6 +7652,90 @@ void SDK_Init()
 	delete hGamedata;
 }
 
+static DynamicDetour DD_ShouldQuickBuild;
+
+static int g_IsMannVsMachineModeCount;
+static bool g_IsMannVsMachineModeState[8];
+static TFTeam g_PreHookTeam;
+
+void Dhook_Init()
+{
+	GameData gamedata = new GameData("tank");
+	if (gamedata)
+	{
+		DD_ShouldQuickBuild = CreateDynamicDetour(gamedata, "CBaseObject::ShouldQuickBuild", DHookCallback_CBaseObject_ShouldQuickBuild_Pre, DHookCallback_CBaseObject_ShouldQuickBuild_Post);
+	}
+	else
+	{
+		SetFailState("Failed to find tank gamedata");
+	}
+
+	delete gamedata;
+}
+
+void DisableDynamicDetour()
+{
+	DD_ShouldQuickBuild.Disable(Hook_Pre, DHookCallback_CBaseObject_ShouldQuickBuild_Pre);
+	DD_ShouldQuickBuild.Disable(Hook_Post, DHookCallback_CBaseObject_ShouldQuickBuild_Post);
+}
+
+static DynamicDetour CreateDynamicDetour(GameData gamedata, const char[] name, DHookCallback callbackPre = INVALID_FUNCTION, DHookCallback callbackPost = INVALID_FUNCTION)
+{
+	DynamicDetour detour = DynamicDetour.FromConf(gamedata, name);
+	if (detour)
+	{
+		if (callbackPre != INVALID_FUNCTION)
+			detour.Enable(Hook_Pre, callbackPre);
+		
+		if (callbackPost != INVALID_FUNCTION)
+			detour.Enable(Hook_Post, callbackPost);
+	}
+	else
+	{
+		LogError("Failed to create detour setup handle for %s", name);
+	}
+	
+	return detour;
+}
+
+
+static MRESReturn DHookCallback_CBaseObject_ShouldQuickBuild_Pre(int obj, DHookReturn ret)
+{
+	SetMannVsMachineMode(true);
+		
+	// Sentries owned by MvM defenders can be re-deployed quickly, move the sentry to the defender team
+	g_PreHookTeam = view_as<TFTeam>(GetEntProp(obj, Prop_Send, "m_iTeamNum"));
+	SetEntProp(obj, Prop_Send, "m_iTeamNum", TFTeam_Red);
+	
+	return MRES_Ignored;
+}
+
+static MRESReturn DHookCallback_CBaseObject_ShouldQuickBuild_Post(int obj, DHookReturn ret)
+{
+	ResetMannVsMachineMode();
+	SetEntProp(obj, Prop_Send, "m_iTeamNum", g_PreHookTeam);
+	
+	return MRES_Ignored;
+}
+
+bool IsMannVsMachineMode()
+{
+	return GameRules_GetProp("m_bPlayingMannVsMachine") != 0;
+}
+
+void SetMannVsMachineMode(bool value)
+{
+	int index = g_IsMannVsMachineModeCount++;
+	g_IsMannVsMachineModeState[index] = IsMannVsMachineMode();
+	GameRules_SetProp("m_bPlayingMannVsMachine", value);
+}
+
+void ResetMannVsMachineMode()
+{
+	int index = --g_IsMannVsMachineModeCount;
+	GameRules_SetProp("m_bPlayingMannVsMachine", g_IsMannVsMachineModeState[index]);
+}
+
 int HealthBar_FindOrCreate()
 {
 	int iHealthBar = EntRefToEntIndex(g_iRefHealthBar);
@@ -10508,10 +10616,11 @@ void Bomb_Think(int iBomb)
 			{
 				// The same player is still planting so make sure they are still on track to delivering the bomb
 				// Make sure they are still on the ground
-				if(GetEntPropEnt(client, Prop_Send, "m_hGroundEntity") != -1 && !lostConnection && Bomb_CanPlayerDeploy(client))
+				if(/*GetEntPropEnt(client, Prop_Send, "m_hGroundEntity") != -1 &&*/ !lostConnection && Bomb_CanPlayerDeploy(client))
 				{
 					// Check if enough time has passed, then the robots have won! ~ 1.90s
-					if(GetEngineTime() - g_flBombPlantStart > config.LookupFloat(g_hCvarBombTimeDeploy))
+					if(	(bIsGiantCarrying && GetEngineTime() - g_flBombPlantStart > config.LookupFloat(g_hCvarGiantBombTimeDeploy)) ||
+						(!bIsGiantCarrying && GetEngineTime() - g_flBombPlantStart > config.LookupFloat(g_hCvarBombTimeDeploy)))
 					{
 #if defined DEBUG
 						PrintToServer("(Bomb_Think) %N has planted the bomb, BOOM!", client);
@@ -10687,7 +10796,7 @@ void Bomb_Think(int iBomb)
 			if(bIsGoal)
 			{
 				// A new player is planting, check to see if they are on the ground.
-				if(GetEntPropEnt(client, Prop_Send, "m_hGroundEntity") != -1 && !lostConnection && Bomb_CanPlayerDeploy(client))
+				if(/*GetEntPropEnt(client, Prop_Send, "m_hGroundEntity") != -1 &&*/ !lostConnection && Bomb_CanPlayerDeploy(client))
 				{
 #if defined DEBUG
 					PrintToServer("(Bomb_Think) %N is planting the bomb!..", client);
@@ -10698,10 +10807,26 @@ void Bomb_Think(int iBomb)
 					if(TF2_IsPlayerInCondition(client, TFCond_Taunting)) TF2_RemoveCondition(client, TFCond_Taunting);
 
 					// Trigger the deploy sequence on the robot
+					/*
 					SDK_Taunt(client, 1, 92);
-					SDK_PlaySpecificSequence(client, "primary_deploybomb");
+					if(bIsGiantCarrying || config.LookupBool(g_hCvarRobot))
+					{
+						SDK_PlaySpecificSequence(client, "primary_deploybomb");
+					}
+					else
+					{
+						SDK_PlaySpecificSequence(client, "taunt_laugh");
+					}
+					*/
 
-					//TF2_StunPlayer(client, config.LookupFloat(g_hCvarBombTimeDeploy)+0.5, 1.0, TF_STUNFLAG_NOSOUNDOREFFECT|TF_STUNFLAG_SLOWDOWN|TF_STUNFLAG_THIRDPERSON);
+					if(bIsGiantCarrying)
+					{
+						TF2_StunPlayer(client, config.LookupFloat(g_hCvarGiantBombTimeDeploy)+0.5, 1.0, TF_STUNFLAG_NOSOUNDOREFFECT|TF_STUNFLAG_SLOWDOWN|TF_STUNFLAG_THIRDPERSON);
+					}
+					else
+					{
+						TF2_StunPlayer(client, config.LookupFloat(g_hCvarBombTimeDeploy)+0.5, 1.0, TF_STUNFLAG_NOSOUNDOREFFECT|TF_STUNFLAG_SLOWDOWN|TF_STUNFLAG_THIRDPERSON);
+					}	
 					
 					BroadcastSoundToTeam(TFTeam_Spectator, "Announcer.MVM_Bomb_Alert_Deploying");
 
@@ -10735,6 +10860,13 @@ void Bomb_Think(int iBomb)
 							}
 						}
 					}
+
+					SetEntityMoveType(client, MOVETYPE_NONE);
+					/*
+					TF2_AddCondition(client, TFCond_FreezeInput);
+					SetVariantInt(1);
+					AcceptEntityInput(client, "SetForcedTauntCam");
+					*/
 				}else{
 					// Reset the planter
 					g_iBombPlayerPlanting = 0;
@@ -10759,6 +10891,11 @@ void Bomb_Think(int iBomb)
 			{
 				SDK_PlaySpecificSequence(client, "Stand_SECONDARY");
 				TF2_RemoveCondition(client, TFCond_Taunting);
+				/*
+				TF2_RemoveCondition(client, TFCond_FreezeInput);
+				SetVariantInt(0);
+				AcceptEntityInput(client, "SetForcedTauntCam");
+				*/
 			}
 		}
 
@@ -11352,33 +11489,35 @@ void ApplyBombCarrierEffects(int client)
 	{
 		case 1: // minicrits
 		{
-			if(TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_RemoveCondition(client, TFCond_CritOnFlagCapture);
+			//if(TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_RemoveCondition(client, TFCond_CritOnFlagCapture);
 			if(TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_RemoveCondition(client, TFCond_DefenseBuffNoCritBlock);
 			
 			if(!TF2_IsPlayerInCondition(client, TFCond_Buffed)) TF2_AddCondition(client, TFCond_Buffed, -1.0, client);
 		}
 		case 2: // minicrits, defense buffs
 		{
-			if(TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_RemoveCondition(client, TFCond_CritOnFlagCapture);
+			//if(TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_RemoveCondition(client, TFCond_CritOnFlagCapture);
 			
 			if(!TF2_IsPlayerInCondition(client, TFCond_Buffed)) TF2_AddCondition(client, TFCond_Buffed, -1.0, client);
 			if(!TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_AddCondition(client, TFCond_DefenseBuffNoCritBlock, -1.0);	// This is the defense buff that MvM uses, resistance to crits.
 		}
 		case 3: // crits, defense buffs
 		{
+			/*
 			if(!g_nTeamGiant[TFTeam_Blue].g_bTeamGiantActive)
 			{
 				if(!TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_AddCondition(client, TFCond_CritOnFlagCapture, -1.0, client);
 			}else{
 				if(TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_RemoveCondition(client, TFCond_CritOnFlagCapture);
 			}
+			*/
 
 			if(!TF2_IsPlayerInCondition(client, TFCond_Buffed)) TF2_AddCondition(client, TFCond_Buffed, -1.0, client); // For players that use the Cow Mangler.
 			if(!TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_AddCondition(client, TFCond_DefenseBuffNoCritBlock, -1.0);	// This is the defense buff that MvM uses, resistance to crits.
 		}
 		default:
 		{
-			if(TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_RemoveCondition(client, TFCond_CritOnFlagCapture);
+			//if(TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_RemoveCondition(client, TFCond_CritOnFlagCapture);
 			if(TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_RemoveCondition(client, TFCond_DefenseBuffNoCritBlock);
 			if(TF2_IsPlayerInCondition(client, TFCond_Buffed) && g_lastBombTier != tier)
 			{
@@ -12497,6 +12636,27 @@ public Action Listener_Taunt(int client, const char[] command, int argc)
 	if(client >= 1 && client <= MaxClients && Spawner_HasGiantTag(client, GIANTTAG_SENTRYBUSTER) && g_flTimeBusterTaunt[client] == 0.0 && GetEntProp(client, Prop_Send, "m_bIsMiniBoss")
 		&& GetEntProp(client, Prop_Send, "m_hGroundEntity") != -1 && !TF2_IsPlayerInCondition(client, TFCond_Taunting))
 	{
+		bool active = false;
+
+		int team = GetClientTeam(client);
+
+		float pos[3];
+		GetClientAbsOrigin(client, pos);
+		pos[2] += 110.0;
+
+		int entity = MaxClients+1;
+		while((entity = FindEntityByClassname(entity, "obj_sentrygun")) > MaxClients)
+		{
+			if(Buster_CanBeDestroyed(entity, team, pos, 200.0)) active = true;
+		}
+						
+		for(int i=1; i<=MaxClients; i++)
+		{
+			if(i != client && !g_hitBySentryBuster[i] && IsClientInGame(i) && IsPlayerAlive(i) && TF2_GetPlayerClass(i) == TFClass_Engineer && Buster_CanBeDestroyed(i, team, pos, 200.0)) active = true;
+		}
+		
+		if(!active) return Plugin_Stop;
+
 		// If the sentry buster uses an action taunt, block it and do the normal class taunt in order to play the animation
 		char strArgs[5];
 		GetCmdArgString(strArgs, sizeof(strArgs));

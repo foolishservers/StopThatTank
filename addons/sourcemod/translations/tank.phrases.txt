@@ -241,7 +241,7 @@
 	}
 	"Tank_Annotation_Buster_Hint"
 	{
-		"en"			"Attack or taunt to self-destruct!"
+		"en"			"Get close to Engineer or Sentry gun for self-destruct!"
 	}
 	"Tank_Annotation_Giant_Spawned"
 	{

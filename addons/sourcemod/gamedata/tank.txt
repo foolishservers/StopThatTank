@@ -94,6 +94,11 @@
 				"linux"		"@_ZN11CBaseObject12DoQuickBuildEb"
 				"windows"	"\x55\x8B\xEC\x53\x56\x57\x8B\xF9\x80\xBF\x2A\x2A\x2A\x2A\x00\x74\x2A\x8B\x07\xFF\x90"
 			}
+			"CBaseObject::ShouldQuickBuild"
+			{
+				"linux"		"@_ZN11CBaseObject16ShouldQuickBuildEv"
+				"windows"	"\x83\x3D\x2A\x2A\x2A\x2A\x00\x56\x8B\xF1\x74\x2A\x8B\x06"
+			}
 			"CTFPlayer::Taunt"
 			{
 				"library"	"server"
@@ -360,6 +365,16 @@
 			{
 				"linux"		"201"
 				"windows"	"200"
+			}
+		}
+		"Functions"
+		{
+			"CBaseObject::ShouldQuickBuild"
+			{
+				"signature"	"CBaseObject::ShouldQuickBuild"
+				"callconv"	"thiscall"
+				"return"	"bool"
+				"this"		"entity"
 			}
 		}
 	}
