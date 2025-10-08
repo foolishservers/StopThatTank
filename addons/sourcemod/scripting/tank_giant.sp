@@ -1277,7 +1277,7 @@ int Giant_PickPlayer(int team)
 */
 
 #define PICK_GIANT_RATIO 0.35
-int Giant_PickPlayer(team)
+int Giant_PickPlayer(int team)
 {
 	int iResource = GetPlayerResourceEntity();
 	if(iResource <= MaxClients) return 0;

@@ -7658,12 +7658,15 @@ static int g_IsMannVsMachineModeCount;
 static bool g_IsMannVsMachineModeState[8];
 static TFTeam g_PreHookTeam;
 
+static DynamicDetour DD_AllowedToHealTarget;
+
 void Dhook_Init()
 {
 	GameData gamedata = new GameData("tank");
 	if (gamedata)
 	{
 		DD_ShouldQuickBuild = CreateDynamicDetour(gamedata, "CBaseObject::ShouldQuickBuild", DHookCallback_CBaseObject_ShouldQuickBuild_Pre, DHookCallback_CBaseObject_ShouldQuickBuild_Post);
+		DD_AllowedToHealTarget = CreateDynamicDetour(gamedata, "CWeaponMedigun::AllowedToHealTarget", DHook_AllowedToHealTarget, DHook_AllowedToHealTarget);
 	}
 	else
 	{
@@ -7677,6 +7680,8 @@ void DisableDynamicDetour()
 {
 	DD_ShouldQuickBuild.Disable(Hook_Pre, DHookCallback_CBaseObject_ShouldQuickBuild_Pre);
 	DD_ShouldQuickBuild.Disable(Hook_Post, DHookCallback_CBaseObject_ShouldQuickBuild_Post);
+	DD_AllowedToHealTarget.Disable(Hook_Pre, DHook_AllowedToHealTarget);
+	DD_AllowedToHealTarget.Disable(Hook_Post, DHook_AllowedToHealTarget);
 }
 
 static DynamicDetour CreateDynamicDetour(GameData gamedata, const char[] name, DHookCallback callbackPre = INVALID_FUNCTION, DHookCallback callbackPost = INVALID_FUNCTION)
@@ -9063,6 +9068,11 @@ public Action Bomb_OnTouch(int iBomb, int iToucher)
 			}
 		}
 
+		return Plugin_Handled;
+	}
+
+	if(iToucher >= 1 && iToucher <= MaxClients && IsClientInGame(iToucher) && IsPlayerAlive(iToucher) && Buster_IsUberExempt(iToucher))
+	{
 		return Plugin_Handled;
 	}
 	
@@ -13001,6 +13011,16 @@ public void TF2_OnConditionAdded(int client, TFCond condition)
 			}
 		}
 	}
+
+	int bomb = EntRefToEntIndex(g_iRefBombFlag);
+	if(bomb > MaxClients && GetEntPropEnt(bomb, Prop_Send, "moveparent") == client)
+	{
+		if( condition == TFCond_Ubercharged || condition == TFCond_Kritzkrieged || condition == TFCond_MegaHeal ||  
+			condition == TFCond_UberBulletResist || condition == TFCond_UberBlastResist || condition == TFCond_UberFireResist)
+		{
+			TF2_RemoveCondition(client, condition);
+		}
+	}
 }
 
 public void TF2_OnConditionRemoved(int client, TFCond condition)
@@ -15902,13 +15922,82 @@ public MRESReturn CMonsterResource_SetBossHealthPercentage(int pThis, Handle hRe
 	return MRES_Ignored;
 }
 
+public MRESReturn DHook_AllowedToHealTarget(int weapon, DHookReturn ret, DHookParam param)
+{
+	if(weapon == -1 || param.IsNull(1)) return MRES_Ignored;
+
+	int target = param.Get(1);
+	if(target < 1 || target > MaxClients || !IsClientInGame(target) || !IsPlayerAlive(target)) return MRES_Ignored;
+
+	int bomb = EntRefToEntIndex(g_iRefBombFlag);
+	if(bomb > MaxClients)
+	{
+		int carrier = GetEntPropEnt(bomb, Prop_Send, "moveparent");
+		if(carrier == target && GetEntProp(weapon, Prop_Send, "m_bChargeRelease"))
+		{
+			if(GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == ITEM_KRITZKRIEG)
+			{
+				StopGameSound(target, "TFPlayer.CritBoostOn");
+			}
+
+			ret.Value = false;
+			return MRES_ChangedOverride;
+		}
+	}
+
+	return MRES_Ignored;
+}
+
+static void StopGameSound(int client, const char[] sound, int entity = SOUND_FROM_PLAYER)
+{
+	int level;
+	float volume;
+	int pitch;
+
+	int channel;
+	char sample[PLATFORM_MAX_PATH];
+
+	if(GetGameSoundParams(sound, channel, level, volume, pitch, sample, sizeof(sample), entity)) {
+		StopSound(client, channel, sample);
+	}
+}
+
 public Action Tank_OnCanRecieveMedigunChargeEffect(int client, int medigunChargeType, bool &result)
 {
 	//PrintToServer("(Tank_OnCanRecieveMedigunChargeEffect) client=%N, medigunChargeType=%d", client, medigunChargeType);
 	if(!g_bEnabled) return Plugin_Continue;
 
+	if(g_nGameMode == GameMode_BombDeploy && g_iRefBombFlag != 0 && client >= 1 && client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == TFTeam_Blue)
+	{
+		int bomb = EntRefToEntIndex(g_iRefBombFlag);
+		if(bomb > MaxClients)
+		{
+			int carrier = GetEntPropEnt(bomb, Prop_Send, "moveparent");
+			if(carrier == client)
+			{
+				result = false;
+				return Plugin_Handled;
+			}
+			else if(carrier >= 1 && carrier <= MaxClients && IsClientInGame(carrier) && GetClientTeam(carrier) == TFTeam_Blue)
+			{
+				if(medigunChargeType == -1 || medigunChargeType == MedigunChargeEffect_Uber || medigunChargeType == MedigunChargeEffect_Kritz || medigunChargeType == MedigunChargeEffect_Quickfix)
+				{
+					return Plugin_Continue;
+				}
+				
+				int medigun = GetPlayerWeaponSlot(client, TFWeaponSlot_Secondary);
+				if(medigun > MaxClients && GetEntPropEnt(medigun, Prop_Send, "m_hHealingTarget") == carrier)
+				{
+					result = false;
+					return Plugin_Handled;
+				}
+			}
+		}
+	}
+
 	// We are only able to block the stock uber effect with this detour so we don't need to worry about blocking other medigun charge effects.
 	// The default behavior will block the stock uber effect on bomb carriers due to a check for: CTFGameRules::m_bPlayingMannVsMachine.
+	/*
 	if(g_nGameMode == GameMode_BombDeploy && g_iRefBombFlag != 0 && client >= 1 && client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == TFTeam_Blue)
 	{
 		// Check if the player is the bomb carrier.
@@ -15956,6 +16045,7 @@ public Action Tank_OnCanRecieveMedigunChargeEffect(int client, int medigunCharge
 			}
 		}
 	}
+	*/
 
 	return Plugin_Continue;
 }
