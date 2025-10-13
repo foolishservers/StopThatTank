@@ -7706,10 +7706,18 @@ static DynamicDetour CreateDynamicDetour(GameData gamedata, const char[] name, D
 
 static MRESReturn DHookCallback_CBaseObject_ShouldQuickBuild_Pre(int obj, DHookReturn ret)
 {
+	char classname[16];
+	GetEntityClassname(obj, classname, sizeof(classname));
+	if(StrEqual(classname, "obj_sentrygun")) return MRES_Ignored;
+	
+	TFTeam team = view_as<TFTeam>(GetEntProp(obj, Prop_Send, "m_iTeamNum"));
+
+	if(team != view_as<TFTeam>(TFTeam_Red)) return MRES_Ignored;
+
 	SetMannVsMachineMode(true);
 		
 	// Sentries owned by MvM defenders can be re-deployed quickly, move the sentry to the defender team
-	g_PreHookTeam = view_as<TFTeam>(GetEntProp(obj, Prop_Send, "m_iTeamNum"));
+	g_PreHookTeam = team;
 	SetEntProp(obj, Prop_Send, "m_iTeamNum", TFTeam_Red);
 	
 	return MRES_Ignored;
@@ -7717,9 +7725,17 @@ static MRESReturn DHookCallback_CBaseObject_ShouldQuickBuild_Pre(int obj, DHookR
 
 static MRESReturn DHookCallback_CBaseObject_ShouldQuickBuild_Post(int obj, DHookReturn ret)
 {
+	char classname[16];
+	GetEntityClassname(obj, classname, sizeof(classname));
+	if(StrEqual(classname, "obj_sentrygun")) return MRES_Ignored;
+	
+	TFTeam team = view_as<TFTeam>(GetEntProp(obj, Prop_Send, "m_iTeamNum"));
+
+	if(team != view_as<TFTeam>(TFTeam_Red)) return MRES_Ignored;
+	
 	ResetMannVsMachineMode();
 	SetEntProp(obj, Prop_Send, "m_iTeamNum", g_PreHookTeam);
-	
+
 	return MRES_Ignored;
 }
 
@@ -11480,6 +11496,10 @@ void ApplyBombCarrierEffects(int client)
 	// The effects are tiered for balance.
 	if(GetEntProp(client, Prop_Send, "m_bIsMiniBoss")) return;
 
+	if(TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_RemoveCondition(client, TFCond_DefenseBuffNoCritBlock);
+
+	if(!TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_AddCondition(client, TFCond_DefenseBuffNoCritBlock, -1.0);	// This is the defense buff that MvM uses, resistance to crits.
+
 	int playerCount;
 	for(int i=1; i<=MaxClients; i++) if(IsClientInGame(i) && GetClientTeam(i) == TFTeam_Red) playerCount++;
 
@@ -11495,39 +11515,38 @@ void ApplyBombCarrierEffects(int client)
 		tier = 1;
 	}
 
+	/*
 	switch(tier)
 	{
 		case 1: // minicrits
 		{
-			//if(TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_RemoveCondition(client, TFCond_CritOnFlagCapture);
+			if(TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_RemoveCondition(client, TFCond_CritOnFlagCapture);
 			if(TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_RemoveCondition(client, TFCond_DefenseBuffNoCritBlock);
 			
 			if(!TF2_IsPlayerInCondition(client, TFCond_Buffed)) TF2_AddCondition(client, TFCond_Buffed, -1.0, client);
 		}
 		case 2: // minicrits, defense buffs
 		{
-			//if(TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_RemoveCondition(client, TFCond_CritOnFlagCapture);
+			if(TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_RemoveCondition(client, TFCond_CritOnFlagCapture);
 			
 			if(!TF2_IsPlayerInCondition(client, TFCond_Buffed)) TF2_AddCondition(client, TFCond_Buffed, -1.0, client);
 			if(!TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_AddCondition(client, TFCond_DefenseBuffNoCritBlock, -1.0);	// This is the defense buff that MvM uses, resistance to crits.
 		}
 		case 3: // crits, defense buffs
 		{
-			/*
 			if(!g_nTeamGiant[TFTeam_Blue].g_bTeamGiantActive)
 			{
 				if(!TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_AddCondition(client, TFCond_CritOnFlagCapture, -1.0, client);
 			}else{
 				if(TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_RemoveCondition(client, TFCond_CritOnFlagCapture);
 			}
-			*/
 
 			if(!TF2_IsPlayerInCondition(client, TFCond_Buffed)) TF2_AddCondition(client, TFCond_Buffed, -1.0, client); // For players that use the Cow Mangler.
 			if(!TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_AddCondition(client, TFCond_DefenseBuffNoCritBlock, -1.0);	// This is the defense buff that MvM uses, resistance to crits.
 		}
 		default:
 		{
-			//if(TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_RemoveCondition(client, TFCond_CritOnFlagCapture);
+			if(TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture)) TF2_RemoveCondition(client, TFCond_CritOnFlagCapture);
 			if(TF2_IsPlayerInCondition(client, TFCond_DefenseBuffNoCritBlock)) TF2_RemoveCondition(client, TFCond_DefenseBuffNoCritBlock);
 			if(TF2_IsPlayerInCondition(client, TFCond_Buffed) && g_lastBombTier != tier)
 			{
@@ -11536,6 +11555,7 @@ void ApplyBombCarrierEffects(int client)
 			}
 		}
 	}
+	*/
 
 	if(g_lastBombTier != tier) 
 
@@ -13284,6 +13304,11 @@ void Attributes_Set(int client)
 			// Increases engineer teleporter build speed.
 			mult = config.LookupFloat(g_hCvarTeleBuildMult);
 			if(mult > 0.0) Tank_SetAttributeValue(client, ATTRIB_TELEPORTER_BUILD_RATE_MULTIPLIER, mult);
+
+			if(GetClientTeam(client) == TFTeam_Red)
+			{
+				Tank_SetAttributeValue(client, 276, 1.0);
+			}
 		}
 	}
 }
