@@ -1256,10 +1256,12 @@ public void OnPluginStart()
 	g_cvar_blueTeamName = FindConVar("mp_tournament_blueteamname");
 	g_cvar_sv_tags = FindConVar("sv_tags");
 	g_cvar_mp_bonusroundtime = FindConVar("mp_bonusroundtime");
+	/*
 	int iFlags = GetConVarFlags(g_hCvarTournament);
 	if(iFlags & FCVAR_NOTIFY) iFlags &= ~(FCVAR_NOTIFY);
 	if(iFlags & FCVAR_REPLICATED) iFlags &= ~(FCVAR_REPLICATED);
 	SetConVarFlags(g_hCvarTournament, iFlags);
+	*/
 	
 	g_hCvarRestartGame = FindConVar("mp_restartgame");
 
@@ -2685,6 +2687,21 @@ public void Event_RoundStart(Handle hEvent, char[] strEventName, bool bDontBroad
 			FireEvent(hEventSound); // this closes the handle
 		}
 	}
+
+	char defaultBlueName[32], defaultRedName[32];
+	if(g_nGameMode == GameMode_Race)
+	{
+		config.LookupString(g_hCvarTeamRedPlr, defaultRedName, sizeof(defaultRedName));
+		config.LookupString(g_hCvarTeamBluePlr, defaultBlueName, sizeof(defaultBlueName));
+	}
+	else
+	{
+		config.LookupString(g_hCvarTeamRed, defaultRedName, sizeof(defaultRedName));
+		config.LookupString(g_hCvarTeamBlue, defaultBlueName, sizeof(defaultBlueName));
+	}
+
+	SetConVarString(g_cvar_blueTeamName, defaultBlueName, true, true);
+	SetConVarString(g_cvar_redTeamName, defaultRedName, true, true);
 }
 
 int Watcher_GetNumControlPoints(int team)
@@ -14725,7 +14742,7 @@ public Action Listener_TeamName(int client, const char[] command, int argc)
 {
 	if(!g_bEnabled) return Plugin_Continue;
 
-	if(g_nGameMode != GameMode_Race) return Plugin_Continue; // Only allow name changing in tank race
+	//if(g_nGameMode != GameMode_Race) return Plugin_Continue; // Only allow name changing in tank race
 	if(client < 1 || client > MaxClients || !IsClientInGame(client)) return Plugin_Continue;
 
 	if(!GameRules_GetProp("m_bInWaitingForPlayers", 1))
@@ -14761,6 +14778,9 @@ public Action Listener_TeamName(int client, const char[] command, int argc)
 	Handle cvarName = g_cvar_blueTeamName;
 	if(team == TFTeam_Red) cvarName = g_cvar_redTeamName;
 
+	Handle cvarSaveName = g_hCvarTeamBlue;
+	if(team == TFTeam_Red) cvarSaveName = g_hCvarTeamRed;
+
 	char current[32];
 	config.LookupString(cvarName, current, sizeof(current));
 	// Block the change if that change is just going to be cutting off the default team name.
@@ -14773,6 +14793,7 @@ public Action Listener_TeamName(int client, const char[] command, int argc)
 	}
 
 	SetConVarString(cvarName, name, true, true);
+	SetConVarString(cvarSaveName, name, true, true);
 
 	return Plugin_Continue;
 }
